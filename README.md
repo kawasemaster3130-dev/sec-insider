@@ -82,6 +82,13 @@
 ## 自己検査（checks.json。毎日の更新で 1 つでも NG なら出し直さない）
 生データが読めた／期間の平日の日ファイルが全部そろっている（2 日前まで）。祝日でない平日に索引が無いままの日は、NG にせずに「索引がまだ無い平日」として出し（ページ全体を止めないため。画面ではその日を「前」）、3 日後の 12:00 UTC を過ぎても無いままなら SEC の休みとして決まった日にする（画面で「休」）／売りが残っていない／金額の検算／載せた行に SEC のリンクが全部ある／会社名が 80% 以上に付いている／期間に収まっている
 
+## 研究（research/。画面とは別。生徒には配らない）
+- 目的: 役員の買いの「その後の成績」を 2006 年からの SEC のデータで総当たりに測り、期待値の高い段の順位を出す。決まりは research/PREREG_v1.md（測る前に凍結。v1.1）。
+- 道具: fetch_sec_insider.py（SEC の Insider Transactions Data Sets の四半期 zip → 買いの行）→ fetch_prices.py（stooq の一括日足。無ければ yfinance）→ fetch_shares.py（SEC の XBRL の発行株数）→ build_events.py（会社 × 届け出日のイベントと特徴）→ analyze.py（事前登録どおりの評価と summary.md）。
+- 動かす所: GitHub Actions「SECインサイダー 検証（総当たり・研究）」を手で起こす（Secret EDGAR_UA が要る）。結果は成果物（Artifacts）research-out-N に置き、リポジトリには書かない。
+- 試験: `python3 research/tests/test_research_offline.py`（作り物のデータでネット無しに通す。6 項目）。
+- 数字は道具だけが書く。人も AI も手で直さない。
+
 ## 手元で動かす
 ```
 python3 build.py --raw data/days --quotes data/market/quotes --fx data/market/usdjpy.json --out out --window 30

@@ -1,0 +1,125 @@
+name: SECインサイダー 検証（総当たり・研究）
+
+# 手で起こす（Actions → この workflow → Run workflow → Branch main）。結果は成果物（Artifacts）に置く。リポジトリには書き込まない。
+# 必要な Secret: EDGAR_UA（SEC に伝える連絡先。例 "ChartMaster sec-insider メール"）
+on:
+  workflow_dispatch:
+    inputs:
+      from_year:
+        description: "最初の年（SEC の四半期ファイル）"
+        default: "2006"
+      to_year:
+        description: "最後の年"
+        default: "2026"
+      two_axis:
+        description: "2 軸の総当たりも出す（true/false）"
+        default: "true"
+      calendar:
+        description: "カレンダータイム（年率）も出す（true/false）"
+        default: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 道具を入れる
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.2" numpy scipy pyarrow yfinance
+
+      - name: 月の印（キャッシュの鍵）
+        id: date
+        run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: 落としたファイルの保管（SEC の四半期 zip・stooq の一括 zip）
+        uses: actions/cache@v4
+        with:
+          path: |
+            research/raw/zips
+            research/raw/d_us_txt.zip
+          key: research-raw-v2-${{ steps.date.outputs.month }}
+          restore-keys: |
+            research-raw-v2-
+
+      - name: 1. SEC の買い（Form 4・P）を取る
+        env:
+          EDGAR_UA: ${{ secrets.EDGAR_UA }}
+        run: |
+          set -o pipefail
+          mkdir -p research/raw research/out
+          python research/fetch_sec_insider.py --out research/raw --from "${{ inputs.from_year }}" --to "${{ inputs.to_year }}" --keep-zips 2>&1 | tee research/out/log_fetch_sec.txt
+
+      - name: 2. 株価（stooq の一括。取れなければ yfinance）を取る
+        run: |
+          set -o pipefail
+          python research/fetch_prices.py --out research/raw --need research/raw/purchases.parquet --checks research/out/data_checks.md 2>&1 | tee research/out/log_fetch_prices.txt
+
+      - name: 3. 発行株数（SEC の XBRL）と銘柄の対応表を取る
+        env:
+          EDGAR_UA: ${{ secrets.EDGAR_UA }}
+        run: |
+          set -o pipefail
+          python research/fetch_shares.py --out research/raw --from 2009 --to "${{ inputs.to_year }}" 2>&1 | tee research/out/log_fetch_shares.txt
+
+      - name: 4. イベントの表を作る
+        run: |
+          set -o pipefail
+          python research/build_events.py --raw research/raw --out research/raw/events.parquet --outdir research/out 2>&1 | tee research/out/log_build.txt
+
+      - name: 5. 総当たりで評価する（事前登録どおり）
+        run: |
+          set -o pipefail
+          ARGS=""
+          if [ "${{ inputs.two_axis }}" != "true" ]; then ARGS="$ARGS --no-two-axis"; fi
+          if [ "${{ inputs.calendar }}" != "true" ]; then ARGS="$ARGS --no-calendar"; fi
+          python -W ignore research/analyze.py --events research/raw/events.parquet --out research/out $ARGS 2>&1 | tee research/out/log_analyze.txt
+
+      - name: 結果の要約を画面に出す
+        if: always()
+        run: |
+          {
+            echo "## 検証の結果（summary.md の先頭）"
+            if [ -f research/out/summary.md ]; then head -c 20000 research/out/summary.md; else echo "summary.md が無い（途中で止まった）"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 結果を成果物に置く（表・要約・ログ）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-out-${{ github.run_number }}
+          path: research/out
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: 中間データを成果物に置く（買いの行・イベントの表。株価は大きいので置かない）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-raw-${{ github.run_number }}
+          path: |
+            research/raw/purchases.parquet
+            research/raw/owners.parquet
+            research/raw/sales.parquet
+            research/raw/amendments.parquet
+            research/raw/shares.parquet
+            research/raw/cik_ticker.parquet
+            research/raw/events.parquet
+            research/raw/purchases_meta.json
+            research/raw/prices_meta.json
+            research/raw/fetch_log.txt
+          if-no-files-found: warn
+          retention-days: 90

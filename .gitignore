@@ -20,3 +20,8 @@ notes/
 # ブラウザ版が運んだ日データ（b64）。日ファイルと同じ中身なので入れない
 browser/in/
 # 日ごとのデータ data/days/ は GitHub の機械が自分で作る。手元のブラウザ版の日ファイルは入れない（機械が同じ場所に保存するので、ここには書けない。最初の保存は入れる物を名前で挙げる）
+# 研究（research/）: 取ってきた生データ・作り物の試験データ・結果は GitHub に入れない（結果は Actions の成果物に置く）
+research/raw/
+research/tests/_synth/
+research/tests/_out_synth/
+research/out/
