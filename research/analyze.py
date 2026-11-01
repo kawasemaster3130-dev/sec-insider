@@ -431,8 +431,11 @@ def main():
     ctrl = pd.concat([control_rows(E, H, D if H == H_MAIN else None, D_d2 if H == H_MAIN else None) for H in HORIZONS], ignore_index=True)
     ctrl.to_csv(os.path.join(a.out, "control.csv"), index=False)
     def ctrl_val(period, col, tier="主要", H=H_MAIN, label="全部の買い（絞らない）"):
+        if len(ctrl) == 0 or any(c not in ctrl.columns for c in ("H", "期間", "枠", "対象", col)):
+            return np.nan
         sub = ctrl[(ctrl["H"] == H) & (ctrl["期間"] == period) & (ctrl["枠"] == tier) & (ctrl["対象"] == label)]
-        return float(sub[col].iloc[0]) if len(sub) and col in sub.columns else np.nan
+        v = sub[col].iloc[0] if len(sub) else np.nan
+        return float(v) if v is not None and not pd.isna(v) else np.nan
 
     # ---- 1 軸ごとに、効く軸と効かない軸（学習の差の t と、学習→検定の順位の一致）
     eff_rows = []
@@ -507,6 +510,7 @@ def main():
     preds = []
     tr, te = ctrl_val("train", "費用後の平均"), ctrl_val("test", "費用後の平均")
     A_share_train = M[M["period"] == "train"]["has_ret"].sum() / max(((M["period"] == "train") & ~M["pending"]).sum(), 1)
+    A_share_train = float(A_share_train) if len(M) else 0.0
     ok1 = None if A_share_train < 0.85 else (bool(0.01 <= tr <= 0.03 and 0.0 <= te <= 0.02) if not (np.isnan(tr) or np.isnan(te)) else None)
     preds.append({"番号": 1, "予想": "全部の買いの費用後 126 日の超過: 学習 +1〜+3%、検定 0〜+2%（A の割合が 85% 未満なら答え合わせしない）", "実際": f"学習 {fmt_pct(tr)}、検定 {fmt_pct(te)}、学習の A の割合 {A_share_train*100:.1f}%", "当たり": ok1, "別枠": False})
     c1 = cm("クラスター人数", "クラスター人数=1人", "test"); c3p = wavg([(cm("クラスター人数", f"クラスター人数={v}", "test"), cn("クラスター人数", f"クラスター人数={v}", "test")) for v in ["3人", "4人以上"]])
@@ -521,7 +525,7 @@ def main():
         preds.append({"番号": 5, "予想": "下落 50% 超 × CEO・CFO: 全部の買いより +3% 以上、勝率 55% 未満、下位 10% は −40% より悪い", "実際": f"平均 {fmt_pct(m5)}（全部 {fmt_pct(te)}）、勝率 {fmt_pct(w5,0)}、下位10% {fmt_pct(p5)}",
                       "当たり": bool(m5 >= te + 0.03 and w5 < 0.55 and p5 < -0.40) if not np.isnan(m5) else None, "別枠": False})
     tp = top[top["区分"] == "合格"]
-    if len(tp):
+    if len(tp) and tp["n_test"].sum() > 0:
         ratio = (tp["mean_test"] * tp["n_test"]).sum() / max(tp["n_test"].sum(), 1) / max((tp["mean_train"] * tp["n_train"]).sum() / max(tp["n_train"].sum(), 1), 1e-9)
         flips = int((tp["mean_test"] <= 0).sum())
         preds.append({"番号": 6, "予想": "10 選の検定の平均は学習の 5〜7 割。検定で符号が逆になるのは 3 本以下", "実際": f"検定÷学習 = {fmt_num(ratio)}、符号が逆 {flips} 本 / {len(tp)}", "当たり": bool(0.5 <= ratio <= 0.7 and flips <= 3), "別枠": False})

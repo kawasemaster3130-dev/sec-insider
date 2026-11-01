@@ -10,9 +10,11 @@
         research/out/data_checks.md   = 測る前の確かめ（上場廃止 5 社があるか、分割・配当・出来高の直し方）
 注意: stooq の値段は分割で直されている（配当は入っていないと見る）。上場廃止の会社は入っていないことがある（研究の報告に書く）。
 """
-import argparse, io, json, os, pickle, re, sys, time, zipfile
+import argparse, io, json, os, pickle, re, sys, time, warnings, zipfile
 import urllib.request
 import numpy as np
+
+warnings.filterwarnings("ignore")
 
 BULK_URLS = ["https://static.stooq.com/db/h/d_us_txt.zip", "https://stooq.com/db/h/d_us_txt.zip"]
 UA = "Mozilla/5.0 (sec-insider research; contact via GitHub kawasemaster3130-dev/sec-insider)"
@@ -61,40 +63,58 @@ def parse_stooq_txt(raw):
     return {"d": d[keep], "o": np.asarray(o, dtype=np.float32)[order][keep], "c": np.asarray(c, dtype=np.float32)[order][keep], "v": np.asarray(v, dtype=np.float32)[order][keep]}
 
 
-def need_symbols(path):
+def norm_symbol(s):
+    s = str(s).strip().upper()
+    if not s or s in ("N/A", "NONE", "NA", "NULL", "-", "NAN"):
+        return ""
+    s = s.split(",")[0].split(" ")[0].split("/")[0].replace(".", "-")
+    return s if re.fullmatch(r"[A-Z0-9-]{1,10}", s) else ""
+
+
+def need_symbols(path, tickers_path=None):
+    """必要な銘柄 = 届け出の銘柄コード（purchases.parquet）＋ SEC の全銘柄（cik_ticker.parquet。基準の母集団）＋ SPY"""
     import pandas as pd
-    P = pd.read_parquet(path, columns=["symbol"])
     syms = set()
-    for s in P["symbol"].dropna().unique():
-        s = str(s).strip().upper()
-        if not s or s in ("N/A", "NONE", "NA", "NULL", "-"):
-            continue
-        s = s.split(",")[0].split(" ")[0].split("/")[0].replace(".", "-")
-        if re.fullmatch(r"[A-Z0-9-]{1,10}", s):
-            syms.add(s)
+    if path and os.path.exists(path):
+        P = pd.read_parquet(path, columns=["symbol"])
+        syms |= {norm_symbol(x) for x in P["symbol"].dropna().unique()}
+    if tickers_path and os.path.exists(tickers_path):
+        T = pd.read_parquet(tickers_path, columns=["ticker"])
+        syms |= {norm_symbol(x) for x in T["ticker"].dropna().unique()}
+    syms.discard("")
     syms.add("SPY")
     return sorted(syms)
 
 
-def yf_fetch(symbols, batch=40, pause=1.0):
-    """yfinance でまとめて取る（分割で直した終値 Close、出来高 Volume）"""
+def yf_fetch(symbols, batch=60, pause=0.5, rename=None):
+    """yfinance でまとめて取る（分割で直した終値 Close、出来高 Volume）。rename = {取りに行く銘柄: 保存する鍵}（倒産後の Q 付き銘柄を元の鍵で保存する）"""
     import yfinance as yf
     import pandas as pd
     out = {}
+    rename = rename or {}
     for i in range(0, len(symbols), batch):
         chunk = symbols[i:i + batch]
-        try:
-            df = yf.download(chunk, period="max", interval="1d", auto_adjust=False, progress=False, threads=True, group_by="ticker")
-        except Exception as e:
-            print(f"[warn] yfinance {chunk[0]}〜: {e}", flush=True); time.sleep(pause * 5); continue
+        df = None
+        for attempt in range(3):
+            try:
+                df = yf.download(chunk, period="max", interval="1d", auto_adjust=False, progress=False, threads=True, group_by="ticker")
+                break
+            except Exception as e:
+                print(f"[warn] yfinance {chunk[0]}〜: {e}", flush=True); time.sleep(pause * 10 * (attempt + 1))
+        if df is None or len(df) == 0:
+            continue
         for tk in chunk:
             try:
                 sub = df[tk] if isinstance(df.columns, pd.MultiIndex) else df
                 sub = sub.dropna(subset=["Close"])
+                sub = sub[sub["Close"] > 0]
                 if len(sub) < 20:
                     continue
                 d = np.asarray([int(x.strftime("%Y%m%d")) for x in sub.index], dtype=np.int32)
-                out[tk] = {"d": d, "o": sub["Open"].to_numpy(dtype=np.float32).ravel(), "c": sub["Close"].to_numpy(dtype=np.float32).ravel(), "v": sub["Volume"].to_numpy(dtype=np.float32).ravel()}
+                order = np.argsort(d, kind="stable"); d = d[order]
+                keep = np.concatenate([[True], d[1:] != d[:-1]])
+                rec = {"d": d[keep], "o": sub["Open"].to_numpy(dtype=np.float32).ravel()[order][keep], "c": sub["Close"].to_numpy(dtype=np.float32).ravel()[order][keep], "v": sub["Volume"].to_numpy(dtype=np.float32).ravel()[order][keep]}
+                out[rename.get(tk, tk)] = rec
             except Exception:
                 pass
         if (i // batch) % 10 == 0:
@@ -154,6 +174,7 @@ def main():
     ap.add_argument("--out", default="research/raw")
     ap.add_argument("--zip", default=None, help="既に落とした d_us_txt.zip の場所")
     ap.add_argument("--need", default=None, help="必要な銘柄の一覧（purchases.parquet）。一括が取れないときの yfinance の対象にもなる")
+    ap.add_argument("--need-tickers", default=None, help="SEC の全銘柄の表（cik_ticker.parquet）。基準の母集団と、CIK から引く今の銘柄のために取る")
     ap.add_argument("--yf-missing", type=int, default=0, help="一括で取れても、無い銘柄を yfinance で最大 N 銘柄だけ補う（0 なら補わない）")
     ap.add_argument("--checks", default="research/out/data_checks.md")
     a = ap.parse_args()
@@ -199,19 +220,26 @@ def main():
                 os.remove(zpath)
             except OSError:
                 pass
-    need = need_symbols(a.need) if (a.need and os.path.exists(a.need)) else []
+    need = need_symbols(a.need, a.need_tickers) if (a.need or a.need_tickers) else []
     missing = [s for s in need if s not in prices]
     if need:
         meta["need"] = len(need); meta["need_found"] = len(need) - len(missing)
         print(f"必要な銘柄 {len(need):,} のうち無い物 {len(missing):,}", flush=True)
     if not bulk_ok and need:
-        print("一括ファイルが取れないので yfinance で必要な銘柄だけ取る", flush=True)
+        print("一括ファイルが取れないので yfinance で必要な銘柄だけ取る（届け出の銘柄 ＋ SEC の全銘柄）", flush=True)
         got = yf_fetch(missing)
-        prices.update(got); market.update({t: "yfinance" for t in got})
+        prices.update(got); market.update({t: "yfinance stocks" for t in got})
+        # 無かった届け出の銘柄は、倒産後の店頭の銘柄（末尾 Q）でもう一度取り、元の鍵で保存する
+        still = [s for s in missing if s not in prices and len(s) <= 4]
+        if still:
+            qmap = {s + "Q": s for s in still}
+            gotq = yf_fetch(sorted(qmap.keys()), rename=qmap)
+            prices.update(gotq); market.update({t: "yfinance stocks (Q)" for t in gotq}); meta["yf_q_filled"] = len(gotq)
+            print(f"末尾 Q の銘柄で補えた物: {len(gotq):,} / {len(still):,}", flush=True)
         meta["source"] = "yfinance（stooq の一括が取れなかった）"; meta["yf_filled"] = len(got)
     elif a.yf_missing > 0 and missing:
         got = yf_fetch(missing[: a.yf_missing])
-        prices.update(got); market.update({t: "yfinance" for t in got}); meta["yf_filled"] = len(got)
+        prices.update(got); market.update({t: "yfinance stocks" for t in got}); meta["yf_filled"] = len(got)
     if "SPY" not in prices:
         print("SPY が無い。市場のものさしが作れない", file=sys.stderr)
         if not prices:

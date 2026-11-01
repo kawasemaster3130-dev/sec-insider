@@ -63,17 +63,18 @@ jobs:
           mkdir -p research/raw research/out
           python research/fetch_sec_insider.py --out research/raw --from "${{ inputs.from_year }}" --to "${{ inputs.to_year }}" --keep-zips 2>&1 | tee research/out/log_fetch_sec.txt
 
-      - name: 2. 株価（stooq の一括。取れなければ yfinance）を取る
-        run: |
-          set -o pipefail
-          python research/fetch_prices.py --out research/raw --need research/raw/purchases.parquet --checks research/out/data_checks.md 2>&1 | tee research/out/log_fetch_prices.txt
-
-      - name: 3. 発行株数（SEC の XBRL）と銘柄の対応表を取る
+      - name: 2. 発行株数（SEC の XBRL）と銘柄の対応表を取る
         env:
           EDGAR_UA: ${{ secrets.EDGAR_UA }}
         run: |
           set -o pipefail
           python research/fetch_shares.py --out research/raw --from 2009 --to "${{ inputs.to_year }}" 2>&1 | tee research/out/log_fetch_shares.txt
+
+      - name: 3. 株価（stooq の一括。取れなければ yfinance で、届け出の銘柄 ＋ SEC の全銘柄）を取る
+        run: |
+          set -o pipefail
+          python research/fetch_prices.py --out research/raw --need research/raw/purchases.parquet --need-tickers research/raw/cik_ticker.parquet --checks research/out/data_checks.md 2>&1 | tee research/out/log_fetch_prices.txt
+          echo "----- data_checks.md -----"; cat research/out/data_checks.md
 
       - name: 4. イベントの表を作る
         run: |
@@ -88,13 +89,17 @@ jobs:
           if [ "${{ inputs.calendar }}" != "true" ]; then ARGS="$ARGS --no-calendar"; fi
           python -W ignore research/analyze.py --events research/raw/events.parquet --out research/out $ARGS 2>&1 | tee research/out/log_analyze.txt
 
-      - name: 結果の要約を画面に出す
+      - name: 結果の要約を画面とログに出す
         if: always()
         run: |
           {
             echo "## 検証の結果（summary.md の先頭）"
             if [ -f research/out/summary.md ]; then head -c 20000 research/out/summary.md; else echo "summary.md が無い（途中で止まった）"; fi
           } >> "$GITHUB_STEP_SUMMARY"
+          for f in research/out/build_meta.json research/out/exclusions.csv research/out/coverage.csv research/out/summary.json research/out/survivorship.csv research/out/predictions.csv research/out/top10.csv research/out/control.csv research/out/calendar_time.csv research/out/axis_effects.csv; do
+            if [ -f "$f" ]; then echo "----- $f -----"; cat "$f"; echo; fi
+          done
+          if [ -f research/out/summary.md ]; then echo "----- summary.md -----"; cat research/out/summary.md; fi
 
       - name: 結果を成果物に置く（表・要約・ログ）
         if: always()
