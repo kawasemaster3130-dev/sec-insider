@@ -5,7 +5,7 @@
 発行: 株式会社チャートマスター（投資助言・代理業 関東財務局長（金商）第2086号）。役員の買いは参考の一つで、売買をすすめる物ではない。
 
 ## 仕組み（2026-11-01 から。GitHub の機械が毎日動かす）
-1. `fetch_edgar.py`（fetch_edgar-2.7。Python の標準ライブラリだけ・鍵なし）が SEC EDGAR の日ごとの索引（daily-index）を読み、Form 4・4/A の届け出から買い（P）の行だけを `data/days/YYYY-MM-DD.json` に保存する。同じ日をもう一度動かしても、新しく増えた届け出だけ取る。取引所は SEC の銘柄と取引所の一覧（/files/company_tickers_exchange.json）から付ける。
+1. `fetch_edgar.py`（fetch_edgar-2.8。Python の標準ライブラリだけ・鍵なし）が SEC EDGAR の日ごとの索引（daily-index）を読み、Form 4・4/A の届け出から買い（P）の行だけを `data/days/YYYY-MM-DD.json` に保存する。同じ日をもう一度動かしても、新しく増えた届け出だけ取る。取引所は SEC の銘柄と取引所の一覧（/files/company_tickers_exchange.json）から付ける。
 2. `fetch_market.py` がドル円（frankfurter.dev。欧州中央銀行の参照レート）を `data/market/usdjpy.json` に保存する。取れなくても止まらない。
 3. `build.py`（集計 1.5）が 30 日分をまとめて `docs/data.json` と自己検査の結果 `docs/checks.json` を書く。検査が 1 つでも NG なら出口コード 2 で止まり、画面は更新しない。
 4. `inject.py` が画面の型 `app.template.html` にデータを埋め込み、`docs/index.html`（GitHub Pages 用。検索エンジンに載せない印つき）と `docs/app.html` を作る。
@@ -16,7 +16,7 @@
 ## 中身
 | ファイル | 役目 |
 |---|---|
-| fetch_edgar.py | 取り込み（Python 版・鍵なし。fetch_edgar-2.7） |
+| fetch_edgar.py | 取り込み（Python 版・鍵なし。fetch_edgar-2.8） |
 | fetch_market.py | ドル円（と現在値。現在値は使っていないので --no-prices） |
 | build.py | 集計と自己検査。data.json と checks.json を書く。検査が 1 つでも NG なら出口コード 2 |
 | inject.py | app.template.html に data.json を埋め込んで 1 枚の HTML にする（--standalone で GitHub Pages 用、--noindex で検索エンジンに載せない印） |

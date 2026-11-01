@@ -20,13 +20,30 @@ from datetime import datetime, timedelta, date, timezone
 
 BASE = "https://www.sec.gov"
 UA = os.environ.get("EDGAR_UA", "").strip()
-COLLECTOR = "fetch_edgar-2.7"   # 2.7: 索引なし・INDEX の印の消し忘れと、ブラウザ版の日ファイルの読み方を直した（2026-11-01）
+COLLECTOR = "fetch_edgar-2.8"   # 2.7: 索引なし・INDEX の印の消し忘れと、ブラウザ版の日ファイルの読み方を直した。2.8: gzip で来た 403 AccessDenied（休日の索引）を読めるようにした（2026-11-01）
 FAILED = False   # get() の返り: bytes=取れた / None=SEC に無い（404・AccessDenied） / FAILED=何度やっても取れなかった
 NOTE_MAX, DOCNOTE_MAX = 4000, 1000   # ブラウザ版 collect_edgar.js v2.3 と同じ
 EXMAP = None   # SEC の銘柄と取引所の一覧（1 回だけ読む）。{"by_cik": {...}, "by_ticker": {...}}
 # 届け出のどこかの脚注・備考に上場（IPO）の言葉があれば ipoInFiling を付ける（ブラウザ版の IPO_RE と同じ）。
 # 「市場の外の買いの可能性」の判定そのものは build.py がする
 IPO_RE = re.compile(r"initial public offering|\bIPO\b", re.I)
+
+
+def is_access_denied(e):
+    """403 の返事が「そのファイルは無い」（S3 の AccessDenied / NoSuchKey の XML）かどうか。
+    Accept-Encoding: gzip を送っているので、エラーの中身も gzip で来ることがある（2026-11-01 の GitHub Actions の実測。
+    そのまま読むと AccessDenied の文字が見つからず、休日の索引を「速すぎて断られた」と取り違えて INDEX の印を付けた）。"""
+    try:
+        body = e.read()
+    except Exception:
+        body = b""
+    try:
+        if body[:2] == b"\x1f\x8b" or (e.headers.get("Content-Encoding", "") if getattr(e, "headers", None) else "") == "gzip":
+            import gzip
+            body = gzip.decompress(body)
+    except Exception:
+        pass
+    return (b"AccessDenied" in body) or (b"NoSuchKey" in body)
 
 
 class Fetcher:
@@ -59,11 +76,7 @@ class Fetcher:
                     return None
                 if e.code == 403:
                     # SEC の保管庫は「無いファイル」を 403 AccessDenied（XML）で返す（休日・未公開の日の索引も）。速すぎて断られたときは HTML
-                    try:
-                        body = e.read()
-                    except Exception:
-                        body = b""
-                    if b"<Code>AccessDenied</Code>" in body:
+                    if is_access_denied(e):
                         return None
                 wait = (2 ** attempt) * 2 + random.random()
                 print(f"[warn] HTTP {e.code} {url} → {wait:.0f}秒待つ", file=sys.stderr)

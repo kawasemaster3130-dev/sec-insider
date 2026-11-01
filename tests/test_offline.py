@@ -34,7 +34,7 @@ fe.main()
 d = json.load(open(os.path.join(out,'2026-10-26.json'), encoding='utf-8'))
 # 読めない物が 1 件まだ残っている（次の回に取り直す）ので、この日は「不完全」（ブラウザ版と同じ決まり）
 assert d['filings_seen']==2 and d['filings_parsed']==1 and len(d['rows'])==1 and d['errors']==['0000000999-26-000001'] and d['complete'] is False and d['tries']=={'0000000999-26-000001':1}, d
-assert d['collector'] == 'fetch_edgar-2.7' and d['index_n'] == 2 and len(d['index_sig']) == 16 and d['rows'][0]['ipoInFiling'] is False and d['rows'][0]['docNote'] == 'test' and d['rows'][0]['issuerExchange'] == '', d['rows'][0]
+assert d['collector'] == 'fetch_edgar-2.8' and d['index_n'] == 2 and len(d['index_sig']) == 16 and d['rows'][0]['ipoInFiling'] is False and d['rows'][0]['docNote'] == 'test' and d['rows'][0]['issuerExchange'] == '', d['rows'][0]
 d2 = json.load(open(os.path.join(out,'2026-10-27.json'), encoding='utf-8'))
 assert d2['filings_seen']==0 and d2['complete'] is True
 # 2回目・3回目: 既に取った届け出は取りに行かない。読めない物は3回目であきらめて記録する
@@ -106,7 +106,7 @@ fb = FakeFetcher(); fe.Fetcher = lambda rps=8.0, max_fail=30: fb
 sys.argv = ['fetch_edgar.py','--from','2026-10-26','--to','2026-10-26','--out',out]
 fe.main()
 d = json.load(open(os.path.join(out,'2026-10-26.json'), encoding='utf-8'))
-assert d['collector'] == 'fetch_edgar-2.7' and len(d['rows']) == 1 and 'dummy' not in d['rows'][0] and d['accessions'] == ['0000950103-26-016190'] and d['errors'] == ['0000000999-26-000001'], d
+assert d['collector'] == 'fetch_edgar-2.8' and len(d['rows']) == 1 and 'dummy' not in d['rows'][0] and d['accessions'] == ['0000950103-26-016190'] and d['errors'] == ['0000000999-26-000001'], d
 # ブラウザ版の「索引なし」の印だけのファイル → 印は引き継ぎ、索引が出れば取る
 json.dump({"date": "2026-10-27", "filings_seen": 0, "index_missing": True, "complete": True, "collector": "collector-2.1", "fetched_at": "2026-10-28T00:00:00Z"}, open(os.path.join(out,'2026-10-27.json'), 'w', encoding='utf-8'))
 f5b = Fake5(); fe.Fetcher = lambda rps=8.0, max_fail=30: f5b
@@ -154,4 +154,18 @@ f4b = Fake4(); fe.Fetcher = lambda rps=8.0, max_fail=30: f4b
 sys.argv = ['fetch_edgar.py','--from','2026-10-26','--to','2026-10-26','--out',out]
 fe.main()
 assert open(os.path.join(out,'2026-10-26.json'), encoding='utf-8').read() == before_b, 'ブラウザ版の日ファイルを索引なしで上書きした'
+# 403 の中身が gzip で来ても「無いファイル」（AccessDenied）と分かる（GitHub Actions の実測。休日の索引を INDEX にしないため）
+import gzip as _gz, io as _io, urllib.error as _ue
+_xml = b'<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>'
+def _err(body, enc):
+    h = {"Content-Encoding": enc} if enc else {}
+    from email.message import Message
+    m = Message()
+    for k, v in h.items(): m[k] = v
+    return _ue.HTTPError("https://www.sec.gov/x", 403, "Forbidden", m, _io.BytesIO(body))
+assert fe.is_access_denied(_err(_xml, None)) is True
+assert fe.is_access_denied(_err(_gz.compress(_xml), "gzip")) is True
+assert fe.is_access_denied(_err(_gz.compress(_xml), None)) is True   # 見出しが無くても gzip の印（1f 8b）で分かる
+assert fe.is_access_denied(_err(b"<html>Request Rate Threshold Exceeded</html>", None)) is False
+assert fe.is_access_denied(_err(b"", None)) is False
 print('offline test OK; calls:', len(f.calls))
