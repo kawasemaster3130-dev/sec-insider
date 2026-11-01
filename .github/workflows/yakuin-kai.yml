@@ -1,0 +1,95 @@
+name: SECインサイダー 取り込み（GitHub）
+
+on:
+  schedule:
+    # UTC 06:25 と 12:25 ＝ 火〜土の 13:25 と 19:25 バンコク（日本 15:25 と 21:25）。
+    # Form 3・4・5 は米国東部 22:00 まで当日扱い（冬時間なら 03:00 UTC、夏時間なら 02:00 UTC）。1 回目はその 3 時間 25 分後（夏時間なら 4 時間 25 分後）、2 回目は索引が遅れた日の拾い直し。
+    - cron: "25 6 * * 2-6"
+    - cron: "25 12 * * 2-6"
+  workflow_dispatch:
+    inputs:
+      days_back:
+        description: "何日前から取り直すか（既に取った届け出は飛ばす）"
+        default: "14"
+      date_from:
+        description: "開始日 YYYY-MM-DD（入れると days_back より優先）"
+        default: ""
+      date_to:
+        description: "終了日 YYYY-MM-DD（省略時は米国東部の昨日）"
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: yakuin-kai
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    # 毎日の回は 90 分で打ち切る（固まった回に分数を食わせない）。手で動かす取り直しだけ長くてよい
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && 330 || 90 }}
+    env:
+      EDGAR_UA: ${{ secrets.EDGAR_UA }}   # リポジトリの Secrets に「ChartMaster sec-insider 連絡先メール」を入れる（SEC の決まり。@ が無いと fetch_edgar.py は動かない）
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 取る日付を決める（終わりは米国東部の昨日。今日の分は取らない）
+        id: dates
+        run: |
+          TO="${{ github.event.inputs.date_to }}"
+          FROM="${{ github.event.inputs.date_from }}"
+          BACK="${{ github.event.inputs.days_back }}"
+          [ -z "$TO" ] && TO=$(TZ=America/New_York date -d yesterday +%F)
+          if [ -z "$FROM" ]; then
+            [ -z "$BACK" ] && BACK=14
+            FROM=$(date -u -d "$TO -$BACK days" +%F)
+          fi
+          echo "from=$FROM" >> "$GITHUB_OUTPUT"
+          echo "to=$TO" >> "$GITHUB_OUTPUT"
+          echo "取る期間: $FROM 〜 $TO"
+
+      - name: EDGAR から Form 4 の買いを取る（同じ日は増えた届け出だけ）
+        # step にも打ち切りを付ける。job の打ち切りより先に当たるので、下の「先に保存する」が普通の失敗として走る
+        timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && 320 || 80 }}
+        run: |
+          set -o pipefail
+          python3 fetch_edgar.py --from "${{ steps.dates.outputs.from }}" --to "${{ steps.dates.outputs.to }}" --out data/days --rps 8 2>&1 | tee fetch.log
+
+      - name: 取った分を先に保存する（取り込みが途中で止まっても残す）
+        if: always()
+        run: |
+          git config user.name "yakuin-kai-bot"
+          git config user.email "yakuin-kai-bot@users.noreply.github.com"
+          if [ -d data/days ]; then git add data/days; fi
+          git diff --cached --quiet || git commit -m "data: Form 4 ${{ steps.dates.outputs.from }}〜${{ steps.dates.outputs.to }}"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push
+
+      - name: ドル円（取れなくても続ける。現在値は使わないので取らない）
+        run: python3 fetch_market.py --days data/days --out data/market --window 30 --no-prices || true
+
+      - name: 集計して画面を作る（自己検査が NG なら失敗にして、画面を更新しない）
+        run: |
+          set -o pipefail
+          python3 build.py --raw data/days --quotes data/market/quotes --fx data/market/usdjpy.json --out docs --window 30 2>&1 | tee build.log
+          python3 inject.py --template app.template.html --data docs/data.json --out docs/index.html --standalone --noindex
+          python3 inject.py --template app.template.html --data docs/data.json --out docs/app.html
+
+      - name: 結果を実行の要約に書く（実行のページで読める。gh run view --log にも同じ行が出る）
+        if: always()
+        run: |
+          { echo "## 取り込み"; tail -n 30 fetch.log 2>/dev/null; echo; echo "## 集計と自己検査"; cat build.log 2>/dev/null; } >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: 画面と集計を保存する
+        if: success()
+        run: |
+          git add docs data/market
+          git diff --cached --quiet || git commit -m "build: SECインサイダー ${{ steps.dates.outputs.to }}"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push

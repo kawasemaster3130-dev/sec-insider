@@ -1,0 +1,22 @@
+# GitHub に入れない物（作業場所だけで使う）
+__pycache__/
+*.pyc
+tests/_out_*/
+tests/fmp_probe/
+out/
+out_preview/
+test_run/
+dist/
+publish/
+archive/
+/market/
+/market_syms_*.json
+merge.py
+*.zip
+fetch.log
+build.log
+# 指示書・監査・引き継ぎ書（ボスのメールが載っている）は入れない
+notes/
+# ブラウザ版が運んだ日データ（b64）。日ファイルと同じ中身なので入れない
+browser/in/
+# 日ごとのデータ data/days/ は GitHub の機械が自分で作る。手元のブラウザ版の日ファイルは入れない（機械が同じ場所に保存するので、ここには書けない。最初の保存は入れる物を名前で挙げる）

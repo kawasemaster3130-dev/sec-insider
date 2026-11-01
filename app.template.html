@@ -1,0 +1,715 @@
+<title>SECインサイダー</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#0b1222">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f5f9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* 1本の縦の列（最大 960px・左揃え）。上から: 固定の見出し → 30日の棒グラフ → 注意書き → 絞り込み → 注目の横並び → 会社の一覧（押すと開く） → 見方 → 発行者情報。
+   見た目の土台はチャートマスターの紺と金（指値ウォッチと同じ家族）。読みやすさのため和文は BIZ UDPゴシック、数字と英字は IBM Plex Sans。 */
+:root{
+  --bg:#0b1222; --raise:#101a2e; --panel:#131e35; --panel-2:#1a2743; --line:#27365a; --line-soft:#1d2946;
+  --fg:#edf1f8; --fg-2:#b4c0d5; --fg-3:#97a4bc;
+  --gold:#e3c27a; --gold-ink:#1c1406; --gold-wash:rgba(227,194,122,.13);
+  --blue:#93bcff; --blue-ink:#07142b; --blue-wash:rgba(147,188,255,.12);
+  --warn:#f2aa62; --ok:#86d8ab; --bar:#56698f; --bar-hi:#e3c27a;
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 32px rgba(0,0,0,.32);
+  --font:"IBM Plex Sans","BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --font-jp:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --font-tick:"IBM Plex Sans Condensed","IBM Plex Sans","Arial Narrow",system-ui,sans-serif;
+  --r-lg:18px; --r-md:12px; --r-sm:8px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f3f5f9; --raise:#ffffff; --panel:#ffffff; --panel-2:#edf1f7; --line:#d3dae7; --line-soft:#e3e8f0;
+    --fg:#0f1a30; --fg-2:#3a4864; --fg-3:#5c6984;
+    --gold:#8a681b; --gold-ink:#ffffff; --gold-wash:rgba(138,104,27,.10);
+    --blue:#1d5ac2; --blue-ink:#ffffff; --blue-wash:rgba(29,90,194,.08);
+    --warn:#a45608; --ok:#1c7746; --bar:#8794ae; --bar-hi:#8a681b;
+    --shadow:0 1px 2px rgba(15,26,48,.06), 0 10px 28px rgba(15,26,48,.07);
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f3f5f9; --raise:#ffffff; --panel:#ffffff; --panel-2:#edf1f7; --line:#d3dae7; --line-soft:#e3e8f0;
+  --fg:#0f1a30; --fg-2:#3a4864; --fg-3:#5c6984;
+  --gold:#8a681b; --gold-ink:#ffffff; --gold-wash:rgba(138,104,27,.10);
+  --blue:#1d5ac2; --blue-ink:#ffffff; --blue-wash:rgba(29,90,194,.08);
+  --warn:#a45608; --ok:#1c7746; --bar:#8794ae; --bar-hi:#8a681b;
+  --shadow:0 1px 2px rgba(15,26,48,.06), 0 10px 28px rgba(15,26,48,.07);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.65;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px;
+  font-feature-settings:"palt" 1;}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:20;background:var(--bg)}
+a{color:var(--blue);text-underline-offset:3px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+.num{font-variant-numeric:tabular-nums lining-nums}
+.wrap{max-width:960px;margin:0 auto}
+
+/* 見出し */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:color-mix(in srgb,var(--bg) 90%,transparent);
+  -webkit-backdrop-filter:saturate(1.4) blur(12px);backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--line-soft);
+  margin-left:calc(-1*max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1*max(16px,env(safe-area-inset-right,0px)));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.mark{flex:0 0 auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--gold);color:var(--gold-ink);
+  font-family:var(--font-tick);font-weight:700;font-size:15px;letter-spacing:.02em}
+.brand{min-width:0;flex:1}
+.brand h1{margin:0;font-size:18px;line-height:1.2;font-weight:700;letter-spacing:.01em}
+.brand p{margin:0;font-size:13px;color:var(--fg-3);font-family:var(--font-jp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upd{font-size:12px;color:var(--fg-2);text-align:right;line-height:1.35;flex:0 0 auto}
+.upd b{display:block;color:var(--fg);font-weight:600;font-size:13px}
+.iconbtn{flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);display:inline-flex;align-items:center;cursor:pointer;
+  font-weight:700;color:var(--fg-2);font-family:var(--font-jp);font-size:14px}
+.iconbtn:hover{color:var(--fg);border-color:var(--fg-3)}
+
+/* 一番上: 30日の棒グラフ */
+.hero{padding-block:22px 6px}
+.hero h2{margin:0;font-size:clamp(22px,5.2vw,30px);line-height:1.3;font-weight:700;letter-spacing:.01em;text-wrap:balance}
+.hero .sum{margin:8px 0 0;color:var(--fg-2);font-family:var(--font-jp);font-size:15px;max-width:44em}
+.hero .sum b{color:var(--fg);font-family:var(--font);font-weight:600}
+.cal{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 14px 8px;box-shadow:var(--shadow)}
+.cal-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.cal-head span{font-size:14px;color:var(--fg-2);font-family:var(--font-jp)}
+.cal-head output{font-size:13px;color:var(--fg);font-weight:600}
+.cal svg{display:block;width:100%;height:auto;overflow:visible}
+.cal .bar{fill:var(--bar);cursor:pointer;transition:fill .15s ease}
+.cal .bar:hover{fill:var(--fg-3)}
+.cal .bar.on{fill:var(--bar-hi)}
+.cal .base{stroke:var(--line);stroke-width:1}
+.cal text{fill:var(--fg-3);font-family:var(--font);font-size:12px}
+.cal text.v{fill:var(--fg);font-weight:600}
+.cal .hit{fill:transparent;cursor:pointer}
+.cal-note{font-size:13px;color:var(--fg-3);margin:6px 2px 0;font-family:var(--font-jp)}
+
+/* 注意書き */
+.notice{display:flex;gap:12px;margin-block:18px 6px;padding:14px 16px;border-radius:var(--r-md);background:var(--gold-wash);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent)}
+.notice svg{flex:0 0 auto;margin-top:3px}
+.notice strong{display:block;font-family:var(--font-jp);font-size:16px;line-height:1.5}
+.notice span{display:block;font-family:var(--font-jp);font-size:13px;color:var(--fg-2);margin-top:2px}
+
+/* 絞り込み */
+.ctrl{display:flex;flex-direction:column;gap:12px;padding-block:16px 6px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button,.chip{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--fg-2);border-radius:999px;padding:8px 14px;font-size:14px;line-height:1.2;cursor:pointer;
+  font-family:var(--font-jp);transition:transform .12s ease,background-color .15s ease,color .15s ease;min-height:38px}
+.seg button:hover,.chip:hover{color:var(--fg);border-color:var(--fg-3)}
+.seg button:active,.chip:active{transform:scale(.97)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg);font-weight:700}
+.seg button .n{font-family:var(--font);font-size:12px;margin-left:6px;opacity:.75;font-variant-numeric:tabular-nums}
+.row2{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search{flex:1 1 240px;min-width:0;position:relative}
+.search input{width:100%;font:inherit;font-size:16px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px 10px 38px;min-height:44px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none}
+select{font:inherit;font-size:16px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;min-height:44px;font-family:var(--font-jp)}
+.toggles{display:flex;gap:16px;flex-wrap:wrap}
+.tg{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--fg-2);font-family:var(--font-jp);cursor:pointer;min-height:32px}
+.tg input{width:18px;height:18px;accent-color:var(--gold);margin:0}
+.dayfilter{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:var(--r-md);background:var(--panel-2);font-size:14px;font-family:var(--font-jp)}
+.dayfilter[hidden]{display:none}
+.dayfilter{margin-top:22px;scroll-margin-top:calc(72px + env(safe-area-inset-top,0px))}
+.dayfilter:not([hidden]) + .listhead{padding-top:14px}
+.nw{white-space:nowrap}
+.hero .sum,.notice strong,.notice span,.help dd,.help p.lead{word-break:auto-phrase}
+.co,#help,#list-h,.listhead{scroll-margin-top:calc(72px + env(safe-area-inset-top,0px))}
+.asof{margin:4px 0 0;font-size:13px;color:var(--fg-3);font-family:var(--font-jp)}
+.dayfilter button{border:0;background:var(--fg);color:var(--bg);border-radius:999px;padding:8px 14px;min-height:36px;font-size:13px;cursor:pointer;font-family:var(--font-jp)}
+.dayfilter .step{background:var(--panel);color:var(--fg);border:1px solid var(--line)}
+.dayfilter .step[disabled]{opacity:.45;cursor:default}
+@media (pointer:coarse){.dayfilter button{min-height:44px;padding:10px 16px}}   /* 指で押す画面では 44px の高さ */
+
+/* 注目の横並び */
+.picks{padding-block:18px 4px}
+.picks h3,.listhead h3{margin:0 0 10px;font-size:17px;font-weight:700;font-family:var(--font-jp)}
+.picks h3 small,.listhead small{font-weight:400;color:var(--fg-3);font-size:13px;margin-left:8px}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:10px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.rail::-webkit-scrollbar{height:6px}.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+@media (min-width:900px){.rail{grid-auto-flow:row;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));grid-auto-columns:auto;overflow-x:visible;scroll-snap-type:none;padding-bottom:0}}
+.pick{scroll-snap-align:start;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:var(--r-md);padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
+.pick:hover{border-color:var(--fg-3)}
+.pick.c{border-color:color-mix(in srgb,var(--gold) 55%,var(--line));background:linear-gradient(180deg,var(--gold-wash),transparent 70%),var(--panel)}
+.pick .t{font-family:var(--font-tick);font-weight:700;font-size:20px;letter-spacing:.01em;line-height:1.15}
+.pick .nm{font-size:13px;color:var(--fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick .am{font-size:15px;font-weight:600;margin-top:6px}
+.pick .ex{font-size:13px;color:var(--fg-3);font-family:var(--font-jp)}
+.empty-rail{font-size:14px;color:var(--fg-3);font-family:var(--font-jp);padding:10px 2px}
+
+/* 一覧 */
+.listhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-block:22px 10px;flex-wrap:wrap}
+.listhead h3{margin:0}
+.list{display:flex;flex-direction:column;gap:10px}
+.co{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.co.cl{border-color:color-mix(in srgb,var(--gold) 50%,var(--line))}
+.co-h{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;padding:14px 16px 12px;width:100%;text-align:left;background:none;border:0;cursor:pointer}
+.co-h:hover{background:color-mix(in srgb,var(--panel-2) 55%,transparent)}
+.co-id{min-width:0}
+.co-t{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.co-t .t{font-family:var(--font-tick);font-weight:700;font-size:24px;letter-spacing:.01em;line-height:1.1}
+.co-t .ex{font-size:12px;color:var(--fg-3)}
+.co-nm{font-size:14px;color:var(--fg-2);margin-top:2px;overflow-wrap:anywhere}
+.co-am{text-align:right}
+.co-am .y{font-size:20px;font-weight:700;line-height:1.2;font-family:var(--font-jp)}
+.co-am .d{font-size:13px;color:var(--fg-2)}
+.co-am .p{font-size:13px;color:var(--fg-3);font-family:var(--font-jp)}
+.co-am .fl,.pick .fl{font-size:12px;color:var(--warn);font-family:var(--font-jp);margin-top:2px}
+.pick .fl{display:block}
+.meta .pt{display:block}
+.badges{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.bd{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;line-height:1.5;font-family:var(--font-jp)}
+.bd.c{background:var(--gold);color:var(--gold-ink)}
+.bd.b{background:var(--blue);color:var(--blue-ink)}
+.bd.r{background:var(--panel-2);color:var(--fg);border:1px solid var(--line)}
+.bd.m{background:transparent;color:var(--fg-2);border:1px solid var(--line);font-weight:400}
+.bd.w{background:transparent;color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 55%,transparent);font-weight:400}
+.strip{grid-column:1/-1;margin-top:10px;display:flex;align-items:center;gap:10px}
+.sl{position:relative;flex:1;min-width:0;height:26px}
+.sl::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)}
+.sl .tk{position:absolute;top:7px;bottom:7px;width:1px;background:var(--line-soft)}
+.sl .dt{position:absolute;top:50%;border-radius:50%;transform:translate(-50%,-50%)}
+.sl .dt.i{background:var(--gold)}
+.sl .dt.f{background:transparent;border:1.6px solid var(--blue)}
+.sl .dt.s{background:var(--fg-3)}
+.sl .dt.old{opacity:.55}
+.strip .lt{flex:0 0 auto;font-size:13px;color:var(--fg-3);font-family:var(--font-jp)}
+.strip .chev{flex:0 0 auto;transition:transform .2s ease;color:var(--fg-3)}
+.co[open] .strip .chev{transform:rotate(180deg)}
+.dot-i{fill:var(--gold)}
+.dot-f{fill:none;stroke:var(--blue);stroke-width:1.6}
+.dot-s{fill:var(--fg-3)}
+.axis{stroke:var(--line);stroke-width:1}
+.tick{stroke:var(--line-soft);stroke-width:1}
+.co-b{display:none;border-top:1px solid var(--line-soft)}
+.co[open] .co-b{display:block}
+.buy{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) auto;gap:6px 16px;padding:12px 16px;border-top:1px solid var(--line-soft);align-items:start}
+.buy:first-child{border-top:0}
+.buy.big{background:var(--blue-wash)}
+.who .n{font-weight:600;overflow-wrap:anywhere}
+.who .r{font-size:13px;color:var(--fg-2);font-family:var(--font-jp)}
+.who .r small{color:var(--fg-3);font-family:var(--font);font-size:12px}
+.when{font-size:13px;color:var(--fg-2);font-family:var(--font-jp)}
+.when b{color:var(--fg);font-family:var(--font);font-weight:600}
+.what{text-align:right}
+.what .y{font-weight:700;font-family:var(--font-jp)}
+.what .d{font-size:13px;color:var(--fg-2)}
+.meta{grid-column:1/-1;display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--fg-2)}
+.meta .up{color:var(--fg);font-weight:700}
+.meta a{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;color:var(--fg);text-decoration:none;font-family:var(--font-jp);font-size:13px;min-height:34px}
+.meta a:hover{border-color:var(--blue);color:var(--blue)}
+.co-f{padding:10px 16px 14px;font-size:13px;color:var(--fg-3);font-family:var(--font-jp);border-top:1px solid var(--line-soft)}
+.more{display:block;margin:14px auto 0;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:10px 18px;cursor:pointer;font-family:var(--font-jp);font-size:14px;color:var(--fg)}
+.empty{padding:28px 18px;text-align:center;color:var(--fg-2);background:var(--panel);border:1px dashed var(--line);border-radius:var(--r-lg);font-family:var(--font-jp)}
+.empty button{margin-top:10px}
+
+/* 見方と発行者情報 */
+.help{margin-top:34px;background:var(--raise);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 18px 10px}
+.help h3{margin:0 0 6px;font-size:18px;font-family:var(--font-jp)}
+.help p.lead{margin:0 0 12px;color:var(--fg-2);font-family:var(--font-jp);font-size:14px}
+.help dl{margin:0;display:grid;grid-template-columns:minmax(7.5em,11em) minmax(0,1fr);gap:10px 16px;font-family:var(--font-jp)}
+.help dt{font-weight:700;font-size:15px}
+.help dd{margin:0;color:var(--fg-2);font-size:14px;max-width:44em}
+.help .legend{display:inline-flex;gap:6px;align-items:center;vertical-align:middle}
+.foot{margin-top:22px;font-size:13px;color:var(--fg-3);line-height:1.8;font-family:var(--font-jp);max-width:44em}
+.foot > div{margin-top:6px}
+.foot .issuer{margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);color:var(--fg-2)}
+.foot details{margin-top:8px}
+.foot summary{cursor:pointer;color:var(--fg-2);padding:8px 0;min-height:32px}
+.foot ul{margin:6px 0 0;padding-left:18px}
+
+@media (max-width:640px){
+  body{font-size:15px}
+  .upd{display:none}
+  .co-h{grid-template-columns:minmax(0,1fr) auto;padding:13px 14px 11px}
+  .co-t .t{font-size:22px}
+  .co-am .y{font-size:18px}
+  .co:not([open]) .co-am .d{display:none}
+  .buy{grid-template-columns:minmax(0,1fr) auto;padding:12px 14px}
+  .buy .when{grid-column:1/-1;order:3}
+  .meta{order:4}
+  .help dl{grid-template-columns:1fr}
+  .help dd{margin-bottom:6px}
+}
+.brand p .tl-s{display:none}
+@media (max-width:520px){.brand p .tl-l{display:none}.brand p .tl-s{display:inline}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="mark" aria-hidden="true">買</div>
+    <div class="brand">
+      <h1>SECインサイダー</h1>
+      <p><span class="tl-l">米国株の役員・取締役が、自分の会社の株を買った届け出</span><span class="tl-s">米国株・役員が自社の株を買った届け出</span></p>
+    </div>
+    <div class="upd num" id="upd" aria-live="polite">読み込み中</div>
+    <button class="iconbtn" type="button" id="helpbtn">見方</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="hero-h">
+    <h2 id="hero-h">この30日の、役員の買い</h2>
+    <p class="asof num" id="asof"></p>
+    <p class="sum" id="sum">データを読み込んでいます。</p>
+    <div class="cal" id="cal">
+      <div class="cal-head"><span>届け出があった日ごとの件数（棒を押すとその日の分だけを表示）</span><output id="cal-out" class="num"></output></div>
+      <svg id="cal-svg" viewBox="0 0 640 150" role="img" aria-label="日ごとの買いの件数の棒グラフ" style="height:auto"></svg>
+      <p class="cal-note" id="cal-note"></p>
+    </div>
+  </section>
+
+  <div class="notice" role="note">
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.5v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.3" r="1.1" fill="currentColor"/></svg>
+    <div>
+      <strong>役員の買いは参考の一つ。いつものポートフォリオのルールと合わせて使う。</strong>
+      <span>ここに載るのは、法律どおりに公開された届け出です。違法な「インサイダー取引」や、会社がする「自社株買い」とは別のものです。この画面は届け出を並べた情報提供で、特定の銘柄の売買をすすめたり助言したりするものではありません。投資の判断はご自身の責任でお願いします。</span>
+    </div>
+  </div>
+
+  <section class="ctrl" aria-label="絞り込み">
+    <div class="seg" role="group" aria-label="期間">
+      <button type="button" data-win="7" aria-pressed="false">7日</button>
+      <button type="button" data-win="14" aria-pressed="false">14日</button>
+      <button type="button" data-win="30" aria-pressed="true">30日</button>
+    </div>
+    <div class="seg" role="group" aria-label="見るもの">
+      <button type="button" data-f="all" aria-pressed="true">すべて<span class="n" id="n-all"></span></button>
+      <button type="button" data-f="cluster" aria-pressed="false">クラスター買い<span class="n" id="n-cluster"></span></button>
+      <button type="button" data-f="big" aria-pressed="false">大きな買い<span class="n" id="n-big"></span></button>
+      <button type="button" data-f="top" aria-pressed="false">CEO・CFO・会長<span class="n" id="n-top"></span></button>
+    </div>
+    <div class="row2">
+      <label class="search"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="search" id="q" placeholder="銘柄コードか会社名で探す（例: HEI）" aria-label="銘柄コードか会社名で探す" autocomplete="off"></label>
+      <select id="sort" aria-label="並び順">
+        <option value="new">届け出が新しい順</option>
+        <option value="usd">金額が大きい順</option>
+        <option value="ppl">買った人が多い順</option>
+      </select>
+    </div>
+    <div class="toggles">
+      <label class="tg"><input type="checkbox" id="incl-funds">大株主（ファンドなど）の買いも表示する</label>
+      <label class="tg"><input type="checkbox" id="incl-otc">店頭（OTC）などの銘柄と投資信託も表示する</label>
+    </div>
+  </section>
+
+  <section class="picks" aria-labelledby="pk-c">
+    <h3 id="pk-c">クラスター買い<small><span class="nw">同じ時期に何人もの役員が</span><span class="nw">買った会社</span></small></h3>
+    <div class="rail" id="rail-c"></div>
+  </section>
+  <section class="picks" aria-labelledby="pk-b">
+    <h3 id="pk-b">大きな買い<small><span class="nw">1人が1日に100万ドル以上、</span><span class="nw">市場でふつうに買った</span></small></h3>
+    <div class="rail" id="rail-b"></div>
+  </section>
+
+  <div class="dayfilter" id="dayfilter" hidden></div>
+  <div class="listhead"><h3 id="list-h" tabindex="-1">一覧</h3><small id="list-n" class="num"></small></div>
+  <section class="list" id="list" aria-labelledby="list-h" aria-live="polite"></section>
+
+  <section class="help" id="help" aria-labelledby="help-h">
+    <h3 id="help-h">この画面の見方</h3>
+    <p class="lead">会社の役員や大株主は、自分の会社の株を売り買いすると、2営業日以内に SEC（米国の証券取引委員会）へ「Form 4」という届け出を出す決まりがあります。この画面は、その届け出のうち「自分のお金で買った」ものだけを毎日まとめています。</p>
+    <dl>
+      <dt>インサイダーとは</dt><dd>「会社の中の人」という意味です。ここに載るのは、法律どおりに公開された届け出です。違法な「インサイダー取引」とは別のものです。</dd>
+      <dt>載せているもの</dt><dd>取引の種類が「買い（P）」の届け出だけです。売りは載せていません。報酬としてもらった株や、権利（ストックオプションなど）を使って手に入れた株は、ふつうは入りませんが、届け出の書き方で混ざることがあります。見つけた物には「市場の外の買いの可能性（報酬や会社の制度）」の印を付けています。1人が1日に何回かに分けて買った分は、1件にまとめています。</dd>
+      <dt>載せる基準</dt><dd>1人が1日に買った合計が 10万ドル以上のものです。クラスター買いの会社は、それより小さい買いも全部載せています。</dd>
+      <dt>クラスター買い</dt><dd>同じ会社の役員・取締役 3人以上（1人 1万ドル以上）が、14日のあいだに買ったものです。買った日で数えます。何人もが同じ時期に買うのは、1人だけの買いより目立つ出来事です。「市場の外の買いの可能性」「決まった買いの可能性」の印が付いた買いと、SPAC（買収目的の会社）の買いは、人数に数えません。</dd>
+      <dt>CEO・CFO・会長</dt><dd>会社のトップ（CEO・社長・CFO・会長）が買った会社だけを表示します。副社長（Vice President）や、部門の社長（President International など）は入りません。「市場の外の買いの可能性」「決まった買いの可能性」の印が付いた買いと、SPAC の買いは数えません。「遅れた届け出」は市場での買いなので数えます。</dd>
+      <dt>大きな買い</dt><dd>1人が1日に 100万ドル以上、市場でふつうに買ったものです。「市場の外の買いの可能性」「遅れた届け出」「決まった買いの可能性」の印が付いた買いと、SPAC（買収目的の会社）の買いは、100万ドル以上でも「大きな買い」には数えません。</dd>
+      <dt>30日の帯</dt><dd>各社の下の帯は、この30日のうち「いつ・だれが」買ったかを点で表します。<span class="legend"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" class="dot-i"/></svg>役員・取締役</span>　<span class="legend"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" class="dot-f"/></svg>大株主・関係する会社</span>　<span class="legend"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" class="dot-s"/></svg>決まった買いの可能性</span>　点が大きいほど金額が大きい買いです。</dd>
+      <dt>関係する会社</dt><dd>取締役を出しているファンドや会社など、人ではなく会社の名前で出された届け出は「関係する会社」と表示し、役員の買いには数えません。</dd>
+      <dt>役員と大株主</dt><dd>役員・取締役は会社の中の人です。最初はこの人たちの買いだけを表示しています。「大株主（ファンドなど）の買いも表示する」を入れると、株を10％以上持つファンドや持ち株会社などの買いも出ます。大株主は会社の中の事情を知らずに買っていることも多いので、印を分け、クラスター買いの人数にも数えません。</dd>
+      <dt>決まった買い</dt><dd>3人以上が同じ日に同じ単価で買ったものは、報酬を株で受け取る決まりなどの可能性があるので印を付け、クラスター買いの人数に数えません。その日に、別の種類の株でほぼ同じ金額（±1%）を買った役員も同じ扱いです。</dd>
+      <dt>計画での買い</dt><dd>前もって決めた計画（10b5-1 という決まり）で自動的に買ったものです。その場の判断の買いとは意味が違います。</dd>
+      <dt>遅れた届け出</dt><dd>買った日から届け出まで10日より長くかかったものです。古い買いが後から出てきただけのこともあります。</dd>
+      <dt>間接保有</dt><dd>本人ではなく、家族・信託・本人の会社などの名義で持っている株の買いです。</dd>
+      <dt>連名</dt><dd>1つの届け出に何人（何社）もの名前が並んでいるものです。同じ買いを一緒に届け出ています。</dd>
+      <dt>訂正あり</dt><dd>前に出した届け出を出し直した（訂正した）ものです。訂正後の数字を使っています。</dd>
+      <dt>市場の外の買い</dt><dd>市場でふつうに買ったのではなく、会社と決めた値段で直接買った可能性がある買いです。次のどれかに当たると印を付けます。「注記の言葉」は、届け出の注記に「private placement（私募）」「initial public offering（上場時の割当）」「directly from the Company（会社から直接）」「irrevocable trust（信託どうしの入れ替え）」「privately negotiated（相手と決めた取引）」「not … in the open market（市場では買っていない）」などの言葉があるもの。「報酬や会社の制度」は、ストックオプションを使った取得、報酬の制度（409A など）や社員・取締役の株の買い付けの制度、配当の再投資、報酬の代わりに受け取った株、会社との取り決め（約束手形など）で受け取った株、株とワラントのセット（ユニット）の値段のもの、株数に端数があって金額がちょうど（100ドル単位）のもの。「上場のとき」は、同じ届け出に上場の話が書かれていて、単価が 18.00ドルのような区切りのよい値のもの。「ちょうどの金額」は、1回の買いの合計がちょうど 100万ドルのような区切りのよい金額のものです（株数も 100株単位のときは、区切りのよい指値で買っただけのことが多いので付けません）。どれも「大きな買い」とクラスター買いの人数、「CEO・CFO・会長」には数えません。</dd>
+      <dt>SPAC（買収目的の会社）</dt><dd>ほかの会社を買うために作られた、まだ事業を持たない会社です。上場のときに、作った人（役員）が決まった値段（ふつう 10ドル）で買うことが多く、ふつうの会社の役員の買いとは意味が違います。印を付け、「大きな買い」とクラスター買いの人数、「CEO・CFO・会長が買った」には数えません。</dd>
+      <dt>店頭（OTC）と投資信託</dt><dd>店頭（OTC）の銘柄は、日本の証券会社では買えないことが多い銘柄です。取引所は SEC の銘柄の一覧で確かめ、そこに無いときは会社情報で確かめます。どちらでも分からない銘柄は「取引所が分からない」と表示します（店頭の銘柄や、まだ上場していない会社が多い）。「ファンド」の印は、会社ではなく投資信託などの買いです。この 3 つは最初は表示していません。「店頭（OTC）などの銘柄と投資信託も表示する」を入れると出ます。</dd>
+      <dt>持ち株の増え方</dt><dd>今回の買いで、その人の持ち株が何％増えたかです。本人の分・家族や信託の分など、持ち主ごとに数えて足しています。もともと少ししか持っていない人が買うと大きな数字になります。普通株と預託証券（ADS）など、種類の違う株を同じ日に買ったときは、株数が比べられないので出しません。</dd>
+      <dt>印の付いた買い</dt><dd>「市場の外の買いの可能性」「決まった買いの可能性」「遅れた届け出」「SPAC」の印が付いた買いです。会社の買いが全部この印の物なら、閉じたカードにも「印の付いた買いだけ（…）」、金額の半分以上なら「金額の多くは印の付いた買い（…）」と出します。カードを開くと、買いごとの印が見えます。「金額が大きい順」「買った人が多い順」は、印の付いていない買いの金額と人数で並べています。</dd>
+      <dt>外国の市場での買い</dt><dd>米国以外の市場（台湾・香港・カナダなど）で買い、届け出の単価を米ドルに換えて書いてあるものです。米国で売買されている預託証券（ADR）の値段とは、1 株の単位が違うことがあります。</dd>
+      <dt>円の金額</dt><dd>更新したときのドル円レートで計算した、およその金額です。</dd>
+      <dt>気をつけること</dt><dd>役員が買った株が上がるとは限りません。使う前に「届け出を開く」で元の書類（SEC のページ）を開き、名前・株数・単価を確かめてください。この画面は毎日機械で作っていて、読み取りの誤りが混ざることがあります。数字が合わない届け出（金額が大きすぎる、時価総額に比べて大きすぎる（会社から直接の買いなど）、単価が今の株価と大きくずれる、単価がドルでない、預託証券（ADS）と普通株の単位が分からない、など）は、一覧から外して下に書いています。預託証券の単価で普通株の株数が書かれている届け出は、株数を預託証券の数に直して載せ、印を付けています。</dd>
+    </dl>
+  </section>
+
+  <footer class="foot" id="foot"></footer>
+</main>
+
+<script id="yk-data" type="application/json">__YK_DATA_JSON__</script>
+<script>
+(function(){
+  "use strict";
+  // 別の場所に置くときは、毎日更新される data.json の URL をここに入れる（読めなければ埋め込みのデータを使う）
+  var DATA_URL = "";
+
+  var TOP_ROLES = {"CEO（社長）":1,"CFO（財務の責任者）":1,"会長":1,"社長・プレジデント":1};
+  var state = { win: 30, f: "all", sort: "new", q: "", inclFunds: false, inclOtc: false, day: "", limit: 40, open: {} };
+  var D = null;
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
+  function n0(v){ return (Number(v)||0).toLocaleString("en-US",{maximumFractionDigits:0}); }
+  function usd(v){ return "$" + n0(v); }
+  function nsh(v){ v = Number(v)||0; return v.toLocaleString("en-US",{maximumFractionDigits: Math.abs(v - Math.round(v)) > 1e-9 ? 4 : 0}); }   // 株数（端数があれば 4 けたまで）
+  function usdShort(v){ v = Number(v)||0; if(v >= 999.5e6) return "$" + (v/1e9).toFixed(2) + "B"; if(v >= 999.5e3) return "$" + (v/1e6).toFixed(2) + "M"; if(v >= 999.5) return "$" + Math.round(v/1e3) + "K"; return "$" + n0(v); }
+  function yen(v){
+    if(!D || !D.usdjpy) return "";
+    var y = (Number(v)||0) * D.usdjpy;
+    // 丸めたあとで桁を選ぶ（9,999.6万円 → 1.0億円 のように、丸めで桁が上がるときも正しく出す）
+    if(Math.round(y/1e8) >= 1e4){ var cho = y/1e12; return "約" + (cho >= 99.95 ? Math.round(cho).toLocaleString("ja-JP") : cho.toFixed(1)) + "兆円"; }
+    if(Math.round(y/1e4) >= 1e4){ var oku = y/1e8; return "約" + (oku >= 99.95 ? Math.round(oku).toLocaleString("ja-JP") : oku.toFixed(1)) + "億円"; }
+    if(Math.round(y) >= 1e4) return "約" + Math.round(y/1e4).toLocaleString("ja-JP") + "万円";
+    return "約" + Math.round(y).toLocaleString("ja-JP") + "円";
+  }
+  function px(v){ v = Number(v)||0; return "$" + v.toLocaleString("en-US",{minimumFractionDigits: v < 1 ? 3 : 2, maximumFractionDigits: v < 1 ? 4 : 2}); }
+  var WD = ["日","月","火","水","木","金","土"];
+  function md(iso){ if(!iso) return ""; var p = iso.split("-"); return Number(p[1]) + "/" + Number(p[2]); }
+  function mdw(iso){ if(!iso) return ""; var dt = new Date(iso + "T00:00:00Z"); return md(iso) + "（" + WD[dt.getUTCDay()] + "）"; }
+  function dayNum(iso){ return Math.round(new Date(iso + "T00:00:00Z").getTime() / 86400000); }
+  var WHY = {"注記": "注記の言葉", "制度": "報酬や会社の制度", "上場": "上場のとき", "金額": "ちょうどの金額"};   // 市場の外の買いの理由（build.py の private_why）
+  // 印の付いた買い（市場の外の買いの可能性・決まった買いの可能性・遅れた届け出・SPAC）。閉じたカードの札と、金額順・人数順の並びに使う
+  function flagged(b){ return !!(b.private_hint || b.same_price || b.late || b.spac); }
+  function rm(){ return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }   // 動きを減らす設定
+  function uniq(a){ var s = {}; return a.filter(function(x){ if(s[x]) return false; s[x] = 1; return true; }); }
+  function pid(b){ return b.pid || b.name; }   // 人を数えるときは届け出人の番号（CIK）で数える（build.py と同じ）
+
+  function clusterPeople(buys){
+    var th = D.thresholds, el = buys.filter(function(b){ return b.insider && !b.same_price && !b.private_hint && !b.spac && (b.usd||0) >= th.cluster_person_min_usd; });
+    var best = 0;
+    el.forEach(function(b0){
+      var d0 = dayNum(b0.date);
+      var ppl = uniq(el.filter(function(b){ var d = dayNum(b.date); return d >= d0 && d < d0 + th.cluster_window_days; }).map(pid));
+      if(ppl.length > best) best = ppl.length;
+    });
+    return best;
+  }
+
+  // 期間・日・トグルで見える会社を作り直す（build.py と同じ決まり: クラスターの会社は全部、それ以外は 10万ドル以上の買いだけ）
+  // 見える会社を作り直す（build.py と同じ決まり: クラスターの会社は全部、それ以外は 10万ドル以上の買いだけ）
+  // クラスターかどうかは「期間」で決め、日の絞り込みはそのあとで当てる（棒の件数と、押したあとの件数を合わせるため）
+  function visible(opt){
+    opt = opt || {};
+    var win = opt.win != null ? opt.win : (state.day ? 30 : state.win);
+    var day = opt.day != null ? opt.day : state.day;
+    var q = (opt.q != null ? opt.q : state.q).trim().toLowerCase();
+    var end = dayNum(D.window_to), th = D.thresholds, out = [];
+    D.companies.forEach(function(c){
+      if(!state.inclOtc && (c.otc || c.fund || c.unknown_exchange)) return;
+      if(q && c.symbol.toLowerCase().indexOf(q) < 0 && (c.name||"").toLowerCase().indexOf(q) < 0) return;
+      var base = c.buys.filter(function(b){ return end - dayNum(b.filing_date) < win; });
+      if(!state.inclFunds) base = base.filter(function(b){ return b.insider; });
+      if(!base.length) return;
+      var cp = c.cluster ? clusterPeople(base) : 0;
+      var cl = cp >= th.cluster_min_people;
+      var buys = cl ? base : base.filter(function(b){ return (b.usd||0) >= th.list_min_usd; });
+      if(day) buys = buys.filter(function(b){ return b.filing_date === day; });
+      if(!buys.length) return;
+      var total = buys.reduce(function(s,b){ return s + (b.usd||0); }, 0);
+      var clean = buys.filter(function(b){ return !flagged(b); });
+      var cleanUsd = clean.reduce(function(s,b){ return s + (b.usd||0); }, 0);
+      out.push({ c: c, buys: buys, cluster: cl, people: uniq(buys.map(pid)).length, clusterPeople: cp,
+        big: buys.some(function(b){ return b.big; }), top: buys.some(function(b){ return TOP_ROLES[b.role] === 1 && !b.same_price && !b.spac && !b.private_hint; }),
+        total: total, cleanUsd: cleanUsd, flagUsd: total - cleanUsd, cleanPeople: uniq(clean.map(pid)).length,
+        latest: buys.reduce(function(m,b){ return b.filing_date > m ? b.filing_date : m; }, "") });
+    });
+    return out;
+  }
+  function plainBuy(b){ return b.insider && !b.private_hint && !b.same_price && !b.late && !b.plan10b5 && !b.spac; }
+  function pick(list){
+    if(state.f === "cluster") return list.filter(function(x){ return x.cluster; });
+    if(state.f === "big") return list.filter(function(x){ return x.big; });
+    if(state.f === "top") return list.filter(function(x){ return x.top; });
+    return list;
+  }
+  function sortL(list){
+    var l = list.slice();
+    // 金額順・人数順は、印の付いていない買いの金額と人数で並べる（上場のときの割当などが上に来ないように）
+    if(state.sort === "usd") l.sort(function(a,b){ return (b.cleanUsd - a.cleanUsd) || (b.total - a.total); });
+    else if(state.sort === "ppl") l.sort(function(a,b){ return (b.cleanPeople - a.cleanPeople) || (b.cleanUsd - a.cleanUsd) || (b.people - a.people); });
+    else l.sort(function(a,b){ return b.latest.localeCompare(a.latest) || (b.total - a.total); });
+    return l;
+  }
+
+  function stripSvg(x){
+    var start = dayNum(D.window_from), end = dayNum(D.window_to), span = Math.max(1, end - start);
+    var h = '<div class="sl" aria-hidden="true">';
+    for(var k = 0; k <= 4; k++) h += '<i class="tk" style="left:' + (k * 25) + '%"></i>';
+    x.buys.slice().sort(function(a,b){ return (b.usd||0) - (a.usd||0); }).forEach(function(b){
+      var d0 = dayNum(b.date), d = Math.min(end, Math.max(start, d0));
+      var left = 1 + 98 * (d - start) / span;
+      var size = Math.round(Math.max(6, Math.min(14, 2.6 * Math.log10(Math.max(10, b.usd||0)) - 6.5)));
+      var cls = b.same_price ? "s" : (b.insider ? "i" : "f");
+      h += '<span class="dt ' + cls + (d0 < start ? " old" : "") + '" style="left:' + left.toFixed(2) + '%;width:' + size + 'px;height:' + size + 'px"></span>';
+    });
+    return h + '</div>';
+  }
+
+  function badges(x){
+    var c = x.c, s = "";
+    if(x.cluster) s += '<span class="bd c">クラスター買い　役員' + x.clusterPeople + '人</span>';
+    if(x.big) s += '<span class="bd b">大きな買い</span>';
+    if(x.top) s += '<span class="bd r">CEO・CFO・会長が買った</span>';
+    if(x.flagUsd > 0 && (x.cleanUsd === 0 || x.flagUsd >= x.total * 0.5)){
+      var fb = x.buys.filter(flagged), kinds = [];
+      if(fb.some(function(b){ return b.private_hint; })) kinds.push("市場の外の買いの可能性");
+      if(fb.some(function(b){ return b.same_price; })) kinds.push("決まった買いの可能性");
+      if(fb.some(function(b){ return b.spac; })) kinds.push("SPAC");
+      if(fb.some(function(b){ return b.late; })) kinds.push("遅れた届け出");
+      s += '<span class="bd w">' + (x.cleanUsd === 0 ? "印の付いた買いだけ" : "金額の多くは印の付いた買い") + '（' + kinds.join("・") + '）</span>';
+    }
+    if(!x.buys.some(function(b){ return b.insider; })) s += '<span class="bd m">大株主・関係する会社の買いだけ</span>';
+    if(c.otc) s += '<span class="bd w">店頭（OTC）</span>';
+    else if(c.unknown_exchange) s += '<span class="bd w">取引所が分からない</span>';
+    if(c.fund) s += '<span class="bd m">ファンド</span>';
+    if(c.spac) s += '<span class="bd m">SPAC（買収目的の会社）</span>';
+    return s;
+  }
+
+  function buyHtml(b){
+    var tags = [];
+    if(b.same_price) tags.push('<span class="bd m">' + (b.same_by === "amount" ? "同じ日・ほぼ同じ金額" : "同じ日・同じ単価") + '（決まった買いの可能性）</span>');
+    if(b.plan10b5) tags.push('<span class="bd m">計画での買い</span>');
+    if(b.late) tags.push('<span class="bd m">遅れた届け出</span>');
+    if(b.private_hint) tags.push('<span class="bd w">市場の外の買いの可能性' + (b.private_why && b.private_why.length ? '（' + b.private_why.map(function(w){ return WHY[w] || w; }).join("・") + '）' : "") + '</span>');
+    if(b.foreign_market) tags.push('<span class="bd m">外国の市場での買い（単価はドルに換えた値）</span>');
+    if(b.ads_converted) tags.push('<span class="bd w">株数は預託証券（ADS）の数に直した（1 ADS = ' + esc(n0(b.ads_converted)) + ' 株）</span>');
+    if(b.amended) tags.push('<span class="bd m">訂正あり</span>');
+    if(b.direct === "I") tags.push('<span class="bd m">間接保有</span>');
+    if(!b.insider) tags.push('<span class="bd m">大株主・関係する会社</span>');
+    if(b.joint && b.joint.length) tags.push('<span class="bd m">連名: ' + esc(b.joint.slice(0,3).join("、")) + (b.joint.length > 3 ? " ほか" : "") + '</span>');
+    var price = (b.price_min && b.price_max && b.price_min !== b.price_max) ? px(b.price_min) + "〜" + px(b.price_max) : px(b.avg_price);
+    var pc = b.stake_increase_pct, multi = b.parts && b.parts.length > 1;
+    var held = b.owned_after_total != null ? b.owned_after_total : b.owned_after;   // 持ち主ごとの取引後の持ち株の合計
+    var stake = multi ? "" : pc == null ? '<span>買った後の持ち株 <span class="num">' + esc(nsh(held)) + '</span> 株</span>'
+      : (pc >= 100 ? '<span>持ち株が <span class="up num">' + esc((1 + pc/100).toLocaleString("en-US",{maximumFractionDigits:1})) + '倍</span>に</span>'
+         : pc < 0.1 ? '<span>持ち株が <span class="up num">0.1%</span> 未満増えた</span>'   // 0.0% と出さない（大株主の小さな買いなど）
+                   : '<span>持ち株が <span class="up num">' + esc(pc.toLocaleString("en-US",{maximumFractionDigits:1})) + '%</span> 増えた</span>');
+    var link = b.urls && b.urls.length ? '<a href="' + esc(b.urls[0]) + '" target="_blank" rel="noopener noreferrer">届け出を開く<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2h6v6M10 2L3 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></a>' : "";
+    return '<div class="buy' + (b.big ? " big" : "") + '">' +
+      '<div class="who"><div class="n">' + esc(b.name) + '</div><div class="r">' + esc(b.role) + ' <small>' + esc(b.roles_raw || "") + '</small></div></div>' +
+      '<div class="when">買った日 <b class="num">' + esc(mdw(b.date)) + '</b><br>届け出 <span class="num">' + esc(md(b.filing_date)) + '</span></div>' +
+      '<div class="what"><div class="y">' + esc(yen(b.usd) || usd(b.usd)) + '</div><div class="d num">' + esc(usd(b.usd)) + '</div></div>' +
+      '<div class="meta">' + (b.parts && b.parts.length > 1
+        ? b.parts.map(function(t){ return '<span class="num pt">' + esc(nsh(t.shares)) + ' 株 × ' + esc(t.price_min !== t.price_max ? px(t.price_min) + "〜" + px(t.price_max) : px(t.price_min)) + '<small>（' + esc(t.security) + '）</small></span>'; }).join("")
+        : '<span class="num">' + esc(nsh(b.shares)) + ' 株 × ' + esc(price) + (b.lots > 1 ? "（" + b.lots + "回に分けて）" : "") + '</span>') + stake + tags.join("") + link + '</div>' +
+    '</div>';
+  }
+
+  function coHtml(x){
+    var c = x.c, open = !!state.open[c.symbol];
+    return '<article class="co' + (x.cluster ? " cl" : "") + '" id="co-' + esc(c.symbol) + '"' + (open ? " open" : "") + '>' +
+      '<button class="co-h" type="button" data-sym="' + esc(c.symbol) + '" aria-expanded="' + open + '">' +
+        '<div class="co-id"><div class="co-t"><span class="t">' + esc(c.symbol) + '</span>' + (c.exchange ? '<span class="ex">' + esc(c.exchange) + '</span>' : "") + '</div>' +
+        '<div class="co-nm">' + esc(c.name || "（会社名なし）") + '</div></div>' +
+        '<div class="co-am"><div class="y">' + esc(yen(x.total) || usdShort(x.total)) + '</div><div class="d num">' + esc(usd(x.total)) + '</div><div class="p">' + x.people + '人・' + x.buys.length + '件の合計</div>' +
+          (x.flagUsd > 0 ? '<div class="fl">うち印付き ' + esc(yen(x.flagUsd) || usdShort(x.flagUsd)) + '</div>' : "") + '</div>' +
+        '<div class="badges">' + badges(x) + '</div>' +
+        '<div class="strip">' + stripSvg(x) + '<span class="lt">最新 ' + esc(md(x.latest)) + '</span>' +
+          '<svg class="chev" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+      '</button>' +
+      '<div class="co-b">' + x.buys.map(buyHtml).join("") +
+        '<div class="co-f">帯の左端は ' + esc(md(D.window_from)) + '、右端は ' + esc(md(D.window_to)) + '。' + (x.cluster ? "クラスター買いの会社なので、10万ドル未満の買いも載せています。" : "") + '</div></div>' +
+    '</article>';
+  }
+
+  function bigLabel(x){
+    var bigs = x.buys.filter(function(b){ return b.big || b.big_raw; });
+    if(bigs.some(plainBuy)) return "役員の買い";
+    if(bigs.some(function(b){ return b.private_hint; })) return "市場の外の買いの可能性";
+    if(bigs.some(function(b){ return b.spac; })) return "SPAC の買い";
+    if(bigs.some(function(b){ return b.same_price; })) return "決まった買いの可能性";
+    if(bigs.some(function(b){ return b.late; })) return "遅れた届け出";
+    if(bigs.some(function(b){ return b.plan10b5; })) return "計画での買い";
+    return bigs.some(function(b){ return b.insider; }) ? "役員の買い" : "大株主の買い";
+  }
+  function pickHtml(x, kind){
+    var c = x.c;
+    return '<button type="button" class="pick' + (kind === "c" ? " c" : "") + '" data-go="' + esc(c.symbol) + '">' +
+      '<span class="t">' + esc(c.symbol) + '</span><span class="nm">' + esc(c.name || "") + '</span>' +
+      '<span class="am">合計 ' + esc(yen(x.total) || usdShort(x.total)) + '</span>' +
+      (x.flagUsd > 0 ? '<span class="fl">うち印付き ' + esc(yen(x.flagUsd) || usdShort(x.flagUsd)) + '</span>' : "") +
+      '<span class="ex">' + (kind === "c" ? "役員 " + x.clusterPeople + "人が買った" : bigLabel(x)) + '　最新 ' + esc(md(x.latest)) + '</span></button>';
+  }
+
+  // 棒＝いまの設定（役員だけか・店頭や投信を入れるか）で、30日のうち一覧に載る買いの件数を届け出日ごとに数えたもの
+  function drawCal(){
+    var svg = $("cal-svg"), days = D.daily || [];
+    if(!days.length){ svg.innerHTML = ""; return; }
+    var cnt = {};
+    visible({win: 30, day: "", q: ""}).forEach(function(x){ x.buys.forEach(function(b){ cnt[b.filing_date] = (cnt[b.filing_date] || 0) + 1; }); });
+    days = days.map(function(d){ return Object.assign({}, d, {buys: cnt[d.date] || 0}); });
+    var W = Math.max(280, Math.round(svg.getBoundingClientRect().width || 640)), H = W < 500 ? 132 : 150, top = 22, bottom = 26, left = 2, right = 2, n = days.length;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    var max = Math.max.apply(null, days.map(function(d){ return d.buys; })) || 1;
+    var bw = (W - left - right) / n, gap = Math.min(6, bw * 0.28);
+    var s = '<line class="base" x1="' + left + '" y1="' + (H - bottom) + '" x2="' + (W - right) + '" y2="' + (H - bottom) + '"/>';
+    var maxI = days.findIndex(function(d){ return d.buys === max; });
+    var lastDay = dayNum(D.window_to);
+    days.forEach(function(d, i){
+      var x = left + i * bw + gap/2, w = bw - gap, h = d.buys ? Math.max(2, (H - top - bottom) * d.buys / max) : 0, y = H - bottom - h;
+      // 「休」= SEC の休み（米国の祝日と、3 日たっても索引が出なかった平日。build.py が holiday を付ける）。「前」= まだ集計前（今日・昨日）か、SEC がまだ索引を出していない平日
+      var on = state.day === d.date, holiday = d.no_index && (d.holiday != null ? d.holiday : dayNum(d.date) < lastDay - 1), pending = d.no_index && !holiday;
+      var label = mdw(d.date) + "：" + d.buys + "件" + (pending ? (dayNum(d.date) >= lastDay - 1 ? "（まだ集計前）" : "（SEC がまだ索引を出していない）") : holiday ? "（SEC の休み）" : "");
+      s += '<g data-day="' + d.date + '" role="button" tabindex="0" aria-label="' + esc(label) + '"><title>' + esc(label) + '</title>';
+      s += '<rect class="hit" x="' + (left + i*bw).toFixed(1) + '" y="0" width="' + bw.toFixed(1) + '" height="' + H + '"/>';
+      if(h) s += '<rect class="bar' + (on ? " on" : "") + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2"/>';
+      else if(d.no_index) s += '<text x="' + (x + w/2).toFixed(1) + '" y="' + (H - bottom - 6) + '" text-anchor="middle">' + (pending ? "前" : "休") + '</text>';
+      if((i === maxI && d.buys) || (on && d.buys)) s += '<text class="v num" x="' + (x + w/2).toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" text-anchor="middle">' + d.buys + '</text>';
+      var dt = new Date(d.date + "T00:00:00Z");
+      if(dt.getUTCDay() === 1 || i === 0) s += '<text x="' + (x + w/2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + md(d.date) + '</text>';
+      s += '</g>';
+    });
+    svg.innerHTML = s;
+    var tot = days.reduce(function(a,d){ return a + d.buys; }, 0);
+    $("cal-out").textContent = state.day ? mdw(state.day) + "：" + ((days.filter(function(d){ return d.date === state.day; })[0] || {buys: 0}).buys) + "件" : "30日で " + n0(tot) + "件";
+    $("cal-note").textContent = "棒は、その日に届け出があって一覧に載る" + (state.inclFunds ? "役員・大株主" : "役員・取締役") + "の買いの件数です（1人・1日を1件）。「休」は SEC の休み（米国の祝日など）、「前」はまだ集計前の日です。";
+  }
+
+  function summary(all){
+    var who = state.inclFunds ? "役員・大株主" : "役員・取締役";
+    var per = state.day ? mdw(state.day) + "の届け出" : "直近" + state.win + "日の届け出";
+    var buys = all.reduce(function(s,x){ return s + x.buys.length; }, 0);
+    var big = all.reduce(function(s,x){ return s + x.buys.filter(function(b){ return b.big; }).length; }, 0);
+    var cl = all.filter(function(x){ return x.cluster; }).length;
+    $("hero-h").textContent = (state.day ? mdw(state.day) + "の、" : "この" + state.win + "日の、") + (state.inclFunds ? "役員・大株主" : "役員") + "の買い";
+    var pre = state.q.trim() ? '<span class="nw">「' + esc(state.q.trim()) + '」の結果：</span>' : "";
+    $("sum").innerHTML = pre + '<span class="nw">' + esc(per) + 'で、</span><span class="nw">' + esc(who) + 'が</span><span class="nw">自分の会社の株を買ったのは</span> <b class="num nw">' + n0(all.length) + '社・' + n0(buys) + '件</b><span class="nw">（10万ドル以上の買いと、</span><span class="nw">クラスター買いの会社の買い）。</span>' +
+      '<span class="nw">クラスター買いは <b class="num">' + cl + '社</b>、</span><span class="nw">市場でふつうに買った</span><span class="nw">100万ドル以上の大きな買いは <b class="num">' + big + '件</b>です。</span>' + (D.partial ? ' <span style="color:var(--warn)">いまは一部のデータだけです。</span>' : "");
+  }
+
+  function render(){
+    var all = visible();
+    summary(all);
+    $("n-all").textContent = all.length + "社";
+    $("n-cluster").textContent = all.filter(function(x){ return x.cluster; }).length + "社";
+    $("n-big").textContent = all.filter(function(x){ return x.big; }).length + "社";
+    $("n-top").textContent = all.filter(function(x){ return x.top; }).length + "社";
+    // 注目の横並び
+    var cl = all.filter(function(x){ return x.cluster; }).sort(function(a,b){ return (b.clusterPeople - a.clusterPeople) || (b.cleanUsd - a.cleanUsd); }).slice(0, 10);
+    var bg = all.filter(function(x){ return x.big; }).sort(function(a,b){
+      var ai = a.buys.some(function(t){ return t.big && plainBuy(t); }) ? 1 : 0, bi = b.buys.some(function(t){ return t.big && plainBuy(t); }) ? 1 : 0;
+      return (bi - ai) || (b.cleanUsd - a.cleanUsd); }).slice(0, 10);
+    $("rail-c").innerHTML = cl.length ? cl.map(function(x){ return pickHtml(x, "c"); }).join("") : '<div class="empty-rail">この条件では、クラスター買いはありません。</div>';
+    $("rail-b").innerHTML = bg.length ? bg.map(function(x){ return pickHtml(x, "b"); }).join("") : '<div class="empty-rail">この条件では、大きな買いはありません。</div>';
+    // 日の絞り込み
+    var df = $("dayfilter");
+    if(state.day){
+      var dl = (D.daily || []).map(function(d){ return d.date; }), di = dl.indexOf(state.day);
+      df.hidden = false;
+      df.innerHTML = '<span><b class="num">' + esc(mdw(state.day)) + '</b> に届け出があった買いだけを表示しています。</span>' +
+        '<button type="button" class="step" id="day-prev"' + (di <= 0 ? " disabled" : "") + '>前の日</button><button type="button" class="step" id="day-next"' + (di < 0 || di >= dl.length - 1 ? " disabled" : "") + '>次の日</button>' +
+        '<button type="button" id="day-clear">すべての日に戻す</button>';
+      var keep = function(first){ var b = $(first); if(!b || b.disabled) b = $(first === "day-prev" ? "day-next" : "day-prev"); if(b && !b.disabled) b.focus({preventScroll: true}); };
+      // 上の注目の並びの高さが変わっても、目印の場所（el）が画面の同じ高さにとどまるようにする
+      var stay = function(el, fn){ var y0 = el.getBoundingClientRect().top; fn(); var y1 = el.getBoundingClientRect().top; if(Math.abs(y1 - y0) > 1) window.scrollBy(0, y1 - y0); };
+      $("day-clear").onclick = function(){ var lh = $("list-h"); stay(lh, function(){ state.day = ""; syncButtons(); drawCal(); render(); }); lh.focus({preventScroll: true}); };
+      $("day-prev").onclick = function(){ if(di > 0){ stay(df, function(){ state.day = dl[di - 1]; state.limit = 40; syncButtons(); drawCal(); render(); }); keep("day-prev"); } };
+      $("day-next").onclick = function(){ if(di >= 0 && di < dl.length - 1){ stay(df, function(){ state.day = dl[di + 1]; state.limit = 40; syncButtons(); drawCal(); render(); }); keep("day-next"); } };
+    }
+    else { df.hidden = true; df.innerHTML = ""; }
+    // 一覧
+    var list = sortL(pick(all));
+    var buys = list.reduce(function(s,x){ return s + x.buys.length; }, 0), tot = list.reduce(function(s,x){ return s + x.total; }, 0);
+    var ftot = list.reduce(function(s,x){ return s + x.flagUsd; }, 0);
+    var lead = state.f === "big" ? "大きな買いがある " + list.length + "社（その会社のほかの買いも表示）　" : state.f === "top" ? "CEO・CFO・会長が買った " + list.length + "社（ほかの人の買いも表示）　" : state.f === "cluster" ? "クラスター買いの " + list.length + "社　" : list.length + "社　";
+    $("list-n").innerHTML = list.length ? '<span class="nw">' + esc(lead) + '</span><span class="nw">' + esc(buys + "件　合計 " + (yen(tot) || usdShort(tot))) + '</span>' + (ftot > 0 ? '<span class="nw">' + esc("（うち印の付いた買い " + (yen(ftot) || usdShort(ftot)) + "）") + '</span>' : "") : "0社";
+    var el = $("list");
+    if(!list.length){
+      var dd = state.day ? (D.daily || []).filter(function(d){ return d.date === state.day; })[0] : null;
+      if(state.q.trim()){
+        el.innerHTML = '<div class="empty">「' + esc(state.q.trim()) + '」に当たる会社はありません。<br><button class="more" type="button" id="clearq">検索を消す</button></div>';
+        $("clearq").onclick = function(){ state.q = ""; $("q").value = ""; render(); };
+      } else if(dd && dd.no_index){
+        var hol = dd.holiday != null ? dd.holiday : dayNum(state.day) < dayNum(D.window_to) - 1;
+        el.innerHTML = '<div class="empty">' + esc(mdw(state.day)) + 'は届け出がありません（' + (hol ? "SEC の休み" : dayNum(state.day) >= dayNum(D.window_to) - 1 ? "まだ集計前" : "SEC がまだ索引を出していない") + '）。<br><button class="more" type="button" id="reset">すべての日に戻す</button></div>';
+        $("reset").onclick = resetAll;
+      } else {
+        el.innerHTML = '<div class="empty">この条件に当てはまる買いはありません。<br><button class="more" type="button" id="reset">条件を元に戻す</button></div>';
+        $("reset").onclick = resetAll;
+      }
+      return;
+    }
+    var shown = list.slice(0, state.limit);
+    el.innerHTML = shown.map(coHtml).join("") + (list.length > shown.length ? '<button class="more" type="button" id="more">続きを表示（あと ' + (list.length - shown.length) + ' 社）</button>' : "");
+    var mb = $("more"); if(mb) mb.onclick = function(){ state.limit += 40; render(); };
+  }
+
+  function resetAll(){ state.win = 30; state.f = "all"; state.q = ""; state.inclFunds = false; state.inclOtc = false; state.day = ""; $("q").value = ""; $("incl-funds").checked = false; $("incl-otc").checked = false; syncButtons(); save(); drawCal(); render(); }
+  function syncButtons(){
+    document.querySelectorAll("[data-win]").forEach(function(b){ b.setAttribute("aria-pressed", String(Number(b.dataset.win) === state.win && !state.day)); });
+    document.querySelectorAll("[data-f]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.f === state.f)); });
+    $("sort").value = state.sort;
+  }
+  // 覚えておくのは並び順だけ。期間（30日）と 2 つのスイッチは、開くたびに最初の決まり（役員・取締役だけ、店頭・投信は出さない）から始める
+  function save(){ try{ localStorage.setItem("yk4", JSON.stringify({sort: state.sort})); }catch(e){} }
+  function load(){ try{ var v = JSON.parse(localStorage.getItem("yk4") || "{}"); if(["new","usd","ppl"].indexOf(v.sort) >= 0) state.sort = v.sort; }catch(e){} $("incl-funds").checked = state.inclFunds; $("incl-otc").checked = state.inclOtc; }
+
+  function foot(){
+    var c = D.counts || {}, th = D.thresholds || {};
+    var sus = (D.suspects || []).map(function(s){ return '<li><b>' + esc(s.symbol) + '</b> ' + esc(s.name) + '（' + esc(md(s.date)) + '）: ' + esc(s.reason) + (s.urls && s.urls[0] ? ' <a href="' + esc(s.urls[0]) + '" target="_blank" rel="noopener noreferrer">届け出</a>' : "") + '</li>'; }).join("");
+    var d0 = (D.window_to || "").split("-");
+    $("foot").innerHTML =
+      '<div>元データ: ' + esc(D.source || "SEC の公開データベース（EDGAR）の Form 4") + '。届け出日 ' + esc(md(D.window_from)) + ' 〜 ' + esc(md(D.window_to)) + '。</div>' +
+      '<div>全体の数（大株主・投資信託・店頭の銘柄も含む）: 届け出の買いの行 ' + n0(c.purchase_rows) + ' 行を 1人・1日にまとめて ' + n0(c.person_days_all != null ? c.person_days_all : c.person_days) + ' 件' + (c.suspects ? '。数字が合わない ' + n0(c.suspects) + ' 件を外した ' + n0(c.person_days) + ' 件' : "") + 'のうち、一覧に載る買いは ' + n0(c.listed_buys) + ' 件・' + n0(c.companies) + ' 社' + (c.listed_small_cluster_buys ? '（クラスター買いの会社の ' + usd(th.list_min_usd) + ' 未満の買い ' + n0(c.listed_small_cluster_buys) + ' 件を含む）' : "") + '。</div>' +
+      '<div>載せる基準: 1人・1日 ' + usd(th.list_min_usd) + ' 以上。大きな買い: ' + usd(th.big_usd) + ' 以上。クラスター買い: ' + th.cluster_window_days + '日のあいだに役員・取締役 ' + th.cluster_min_people + '人以上（1人 ' + usd(th.cluster_person_min_usd) + ' 以上）。' + (D.usdjpy ? '円は 1ドル ' + D.usdjpy.toFixed(2) + '円' + (D.usdjpy_asof_jst ? '（' + esc(D.usdjpy_asof_jst) + ' 日本時間の時点）' : "") + 'で計算したおよその金額。' : "") + '</div>' +
+      '<div>この画面は SEC（米国証券取引委員会）が作ったものではありません。SEC が公開している届け出を、株式会社チャートマスターが毎日まとめています。</div>' +
+      (sus ? '<details><summary>数字が合わない、または時価総額に比べて大きすぎるので、一覧から外した届け出（' + (D.suspects||[]).length + '件）</summary><ul>' + sus + '</ul></details>' : "") +
+      '<div class="issuer">【重要】本コンテンツは情報提供を目的としたものであり、特定の銘柄の売買を推奨・助言するものではありません。投資判断はご自身の責任でお願いいたします。<br>' +
+      '発行：株式会社チャートマスター<br>金融商品取引業者（投資助言・代理業）登録番号：関東財務局長（金商）第2086号<br>※広告<br>' +
+      '評価基準日：' + esc(d0.length === 3 ? d0[0] + "年" + Number(d0[1]) + "月" + Number(d0[2]) + "日" : "") + '（データの更新 ' + esc(D.generated_at_jst || "") + ' 日本時間）　SECインサイダー v' + esc(D.version || "") + '</div>';
+  }
+
+  function boot(data){
+    D = data;
+    var c = D.counts || {};
+    var g = (D.generated_at_jst || "").slice(5).replace("-", "/");
+    $("upd").innerHTML = '<b class="num">' + esc(g) + '</b>日本時間に更新';
+    $("asof").textContent = g ? g + "（日本時間）に更新　毎日、前の日までの届け出を足しています" : "";
+    load(); syncButtons(); drawCal(); render(); foot();
+    window.addEventListener("resize", function(){ clearTimeout(window.__ykR); window.__ykR = setTimeout(drawCal, 150); });
+  }
+
+  // 操作
+  document.addEventListener("click", function(e){
+    var h = e.target.closest(".co-h");
+    if(h){ var sym = h.dataset.sym, art = h.parentNode, open = !art.hasAttribute("open"); if(open){ art.setAttribute("open", ""); state.open[sym] = 1; } else { art.removeAttribute("open"); delete state.open[sym]; } h.setAttribute("aria-expanded", String(open)); return; }
+    var p = e.target.closest("[data-go]");
+    if(p){ var s = p.dataset.go; state.open[s] = 1; state.f = "all"; state.q = ""; $("q").value = ""; syncButtons();
+      var all = sortL(visible()), idx = all.findIndex(function(x){ return x.c.symbol === s; }); if(idx >= state.limit) state.limit = idx + 1;
+      render(); var t = $("co-" + s); if(t){ t.scrollIntoView({behavior: rm() ? "auto" : "smooth", block: "start"}); t.querySelector(".co-h").focus({preventScroll: true}); } return; }
+    var g = e.target.closest("[data-day]");
+    if(g){ state.day = state.day === g.dataset.day ? "" : g.dataset.day; state.limit = 40; syncButtons(); drawCal(); render();
+      // キーボードで押したときは、棒の場所にとどまる（もう一度 Enter で戻せるように）。指やマウスのときは一覧へ動く
+      if(state.day && !e.__fromKey){ var dfl = $("dayfilter"); if(dfl) dfl.scrollIntoView({behavior: rm() ? "auto" : "smooth", block: "start"}); } return; }
+    var w = e.target.closest("[data-win]");
+    if(w){ state.win = Number(w.dataset.win); state.day = ""; state.limit = 40; syncButtons(); save(); drawCal(); render(); return; }
+    var f = e.target.closest("[data-f]");
+    if(f){ state.f = f.dataset.f; state.limit = 40; syncButtons(); render(); return; }
+  });
+  document.addEventListener("keydown", function(e){ var g = e.target.closest && e.target.closest("[data-day]"); if(g && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); var dd = g.dataset.day, ev = new MouseEvent("click", {bubbles: true}); ev.__fromKey = true; g.dispatchEvent(ev);
+    var again = document.querySelector('#cal-svg [data-day="' + dd + '"]'); if(again) again.focus({preventScroll: true}); } });
+  $("sort").addEventListener("change", function(){ state.sort = this.value; save(); render(); });
+  $("q").addEventListener("input", function(){ state.q = this.value; state.limit = 40; render(); });
+  $("incl-funds").addEventListener("change", function(){ state.inclFunds = this.checked; save(); drawCal(); render(); });
+  $("incl-otc").addEventListener("change", function(){ state.inclOtc = this.checked; save(); drawCal(); render(); });
+  $("helpbtn").addEventListener("click", function(){ $("help").scrollIntoView({behavior: rm() ? "auto" : "smooth", block: "start"}); var hh = $("help-h"); hh.setAttribute("tabindex", "-1"); hh.focus({preventScroll: true}); });
+
+  var embedded = null;
+  try{ embedded = JSON.parse(document.getElementById("yk-data").textContent); }catch(e){ embedded = null; }
+  function noData(msg){ $("upd").textContent = ""; $("sum").textContent = msg; $("list").innerHTML = '<div class="empty">' + esc(msg) + '</div>'; }
+  if(DATA_URL){
+    fetch(DATA_URL, {cache: "no-store"}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(boot).catch(function(){ if(embedded) boot(embedded); else noData("データを読み込めませんでした。時間をおいて開き直してください。"); });
+  } else if(embedded && embedded.companies){ boot(embedded); }
+  else { noData("まだデータが入っていません。毎日の更新のあとに表示されます。"); }
+})();
+</script>
