@@ -584,6 +584,18 @@ def fx_jst(asof):
         return ""
 
 
+def fx_label(asof):
+    """画面の円の説明に付ける文。時刻のある値なら '10/28 22:01 日本時間の時点'、日付だけ（frankfurter.dev の欧州中央銀行の参照レート）なら '10/30 の欧州中央銀行の参照レート'。読めなければ空"""
+    s = str(asof or "").strip()
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", s):
+        try:
+            return datetime.strptime(s, "%Y-%m-%d").strftime("%m/%d") + " の欧州中央銀行の参照レート"
+        except Exception:
+            return ""
+    j = fx_jst(s)
+    return (j + " 日本時間の時点") if j else ""
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default="raw", help="生データの置き場（*.json。fetch_edgar.py の日ごとのファイルか FMP の返り）")
@@ -1094,7 +1106,7 @@ def main():
     fds = sorted(a["filing_date"] for a in person_days)
     out = {
         "app": "SECインサイダー",
-        "version": "1.5",
+        "version": "1.6",
         "generated_at": now.replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "generated_at_jst": (now + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
         "window_days": args.window,
@@ -1105,6 +1117,7 @@ def main():
         "usdjpy": usdjpy,
         "usdjpy_asof": usdjpy_asof,
         "usdjpy_asof_jst": fx_jst(usdjpy_asof),
+        "usdjpy_asof_label": fx_label(usdjpy_asof),
         "source": "SEC の公開データベース（EDGAR）の Form 4" if from_edgar else "SEC の Form 4（FMP 経由・最新 100 件の一部）",
         "partial": (not from_edgar) or bool(args.partial_ok),
         "thresholds": {
