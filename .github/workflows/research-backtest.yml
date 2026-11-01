@@ -2,7 +2,7 @@ name: SECインサイダー 検証（総当たり・研究）
 
 # 手で起こす（Actions → この workflow → Run workflow → Branch main）。結果は成果物（Artifacts）に置く。リポジトリには書き込まない。
 # 必要な Secret: EDGAR_UA（SEC に伝える連絡先。例 "ChartMaster sec-insider メール"）
-# 仕事の流れ: 1 台目（prep）が SEC の買いと発行株数を取って銘柄の一覧を作る → 12 台（prices）が株価を分けて取る（Yahoo は 1 つの IP で約 2,000 件しか取れない）→ 1 台（research）が合わせて表を作り評価する
+# 仕事の流れ: 1 台目（prep）が SEC の買いと発行株数を取って銘柄の一覧を作る → 20 台（prices）が株価を分けて取る（Yahoo は 1 つの IP でゆっくりしか取れない。古い銘柄は stooq だけ）→ 1 台（research）が合わせて表を作り評価する
 on:
   workflow_dispatch:
     inputs:
@@ -82,6 +82,7 @@ jobs:
             research/raw/purchases_meta.json
             research/raw/fetch_log.txt
             research/raw/symbols.txt
+            research/raw/symbols.txt.old
             research/raw/symbols.txt.json
             research/out/log_fetch_sec.txt
             research/out/log_fetch_shares.txt
@@ -93,11 +94,11 @@ jobs:
     name: 2. 株価を分けて取る
     needs: prep
     runs-on: ubuntu-latest
-    timeout-minutes: 170
+    timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -115,7 +116,7 @@ jobs:
         run: |
           set -o pipefail
           ls research/raw | head -20
-          python -W ignore research/fetch_prices.py --shard ${{ matrix.shard }}/12 --symbols research/raw/symbols.txt --shard-out research/raw/shards/prices_shard_${{ matrix.shard }}.pkl 2>&1 | tee research/out/log_prices_shard_${{ matrix.shard }}.txt
+          python -W ignore research/fetch_prices.py --shard ${{ matrix.shard }}/20 --budget 120 --symbols research/raw/symbols.txt --shard-out research/raw/shards/prices_shard_${{ matrix.shard }}.pkl 2>&1 | tee research/out/log_prices_shard_${{ matrix.shard }}.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

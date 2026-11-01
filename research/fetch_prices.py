@@ -81,7 +81,10 @@ def parse_stooq_txt(raw):
 
 
 # ----------------------------------------------------------------------------- 2. 銘柄の一覧
-def list_symbols(purchases_path, tickers_path, out_path):
+def list_symbols(purchases_path, tickers_path, out_path, universe_sample=1500, seed=7):
+    """2 つの一覧を作る。
+    out_path            = Yahoo で取る物: 届け出の会社の今の銘柄（CIK → company_tickers.json）＋ 基準の母集団の見本（SEC の全銘柄から無作為に universe_sample）＋ SPY
+    out_path + '.old'   = stooq だけで取る物: 今の銘柄が無い会社（もう SEC に届け出ていない＝上場廃止・買収の疑い）の届け出の銘柄。Yahoo にはほぼ無い"""
     import pandas as pd
     P = pd.read_parquet(purchases_path, columns=["issuer_cik", "symbol"])
     P["issuer_cik"] = pd.to_numeric(P["issuer_cik"], errors="coerce")
@@ -102,15 +105,19 @@ def list_symbols(purchases_path, tickers_path, out_path):
         else:
             old |= {norm_symbol(x) for x in g["symbol"].dropna().unique()}
     old.discard("")
-    universe = set(cik2t.values())
-    syms = sorted((current | universe | old | {"SPY"}) - {""})
-    # 先に優先の高い物（SPY・今の銘柄）、後に古い銘柄。分けたときに偏らないよう、並びは名前順
+    universe = sorted(set(cik2t.values()) - current)
+    rng = np.random.default_rng(seed)
+    sample = set(rng.choice(universe, size=min(universe_sample, len(universe)), replace=False).tolist()) if universe else set()
+    yahoo = sorted((current | sample | {"SPY"}) - {""})
+    old = sorted(old - set(yahoo))
     with open(out_path, "w") as f:
-        f.write("\n".join(syms) + "\n")
-    meta = {"current_issuers": len(current), "old_symbols": len(old), "sec_universe": len(universe), "total": len(syms)}
+        f.write("\n".join(yahoo) + "\n")
+    with open(out_path + ".old", "w") as f:
+        f.write("\n".join(old) + "\n")
+    meta = {"current_issuers": len(current), "universe_other": len(universe), "universe_sample": len(sample), "yahoo_total": len(yahoo), "old_symbols_stooq_only": len(old)}
     json.dump(meta, open(out_path + ".json", "w"), indent=1)
     print(f"銘柄の一覧: {meta}", flush=True)
-    return syms
+    return yahoo, old
 
 
 # ----------------------------------------------------------------------------- 3. 分けて取る
@@ -161,21 +168,23 @@ def stooq_one(sym):
     return ("ok", rec) if rec is not None else ("none", None)
 
 
-def fetch_shard(symbols, k, n, out_pkl, yf_pause=0.6, stooq_pause=1.2, stooq_cap=600, budget_min=130.0):
-    """分担の分を取る。100 銘柄ごとに途中保存し、時間の予算（分）を超えたら残りはあきらめて保存する（機械の時間切れで全部を失わないため）"""
+def fetch_shard(symbols, old_symbols, k, n, out_pkl, yf_pause=0.5, stooq_pause=1.0, budget_min=130.0):
+    """分担の分を取る。Yahoo の一覧（今の銘柄）→ Yahoo で無かった物と、古い銘柄の一覧（stooq だけ）→ stooq の 1 銘柄 CSV。
+    100 銘柄ごとに途中保存し、時間の予算（分）を超えたら残りはあきらめて保存する（機械の時間切れで全部を失わないため）"""
     mine = [s for i, s in enumerate(symbols) if i % n == k]
+    mine_old = [s for i, s in enumerate(old_symbols) if i % n == k]
     if k == 0 and "SPY" not in mine:
         mine = ["SPY"] + mine
-    print(f"分担 {k}/{n}: {len(mine):,} 銘柄（時間の予算 {budget_min:.0f} 分）", flush=True)
+    print(f"分担 {k}/{n}: Yahoo {len(mine):,} 銘柄、stooq だけ {len(mine_old):,} 銘柄（時間の予算 {budget_min:.0f} 分）", flush=True)
     os.makedirs(os.path.dirname(out_pkl) or ".", exist_ok=True)
     prices, market = {}, {}
     def save(note=""):
         with open(out_pkl, "wb") as f:
-            pickle.dump({"prices": prices, "market": market, "shard": [k, n], "mine": len(mine), "note": note}, f, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump({"prices": prices, "market": market, "shard": [k, n], "mine": len(mine) + len(mine_old), "note": note}, f, protocol=pickle.HIGHEST_PROTOCOL)
     t0 = time.time(); done = 0; limits = 0; stopped = ""
     for sym in mine:
-        if (time.time() - t0) / 60 > budget_min * 0.75:
-            stopped = f"時間の予算の 75% を使ったので Yahoo はここまで（{done}/{len(mine)}）"; print(stopped, flush=True); break
+        if (time.time() - t0) / 60 > budget_min * 0.6:
+            stopped = f"時間の予算の 60% を使ったので Yahoo はここまで（{done}/{len(mine)}）"; print(stopped, flush=True); break
         rec = None
         for attempt in range(4):
             try:
@@ -195,9 +204,10 @@ def fetch_shard(symbols, k, n, out_pkl, yf_pause=0.6, stooq_pause=1.2, stooq_cap
         time.sleep(yf_pause)
     save("Yahoo まで")
     missing = [s for s in mine if s not in prices]
-    print(f"Yahoo で取れた {len(prices):,} / {len(mine):,}（試した {done}）。無い {len(missing):,} を stooq の 1 銘柄 CSV で引く（上限 {stooq_cap}）", flush=True)
+    todo = mine_old + missing
+    print(f"Yahoo で取れた {len(prices):,} / {len(mine):,}（試した {done}）。stooq の 1 銘柄 CSV で {len(todo):,} 銘柄（古い {len(mine_old):,} ＋ Yahoo に無かった {len(missing):,}）を引く", flush=True)
     got_s = 0; tried = 0
-    for sym in missing[:stooq_cap]:
+    for sym in todo:
         if (time.time() - t0) / 60 > budget_min:
             print(f"  時間の予算を使ったので stooq はここまで（{tried} 件）", flush=True); break
         st, rec = stooq_one(sym)
@@ -207,7 +217,7 @@ def fetch_shard(symbols, k, n, out_pkl, yf_pause=0.6, stooq_pause=1.2, stooq_cap
         if rec is not None:
             prices[sym] = rec; market[sym] = "stooq stocks (per-symbol)"; got_s += 1
         if tried % 100 == 0:
-            save("stooq 途中")
+            save("stooq 途中"); print(f"  stooq {tried:,}/{len(todo):,} … 補えた {got_s:,}（{(time.time()-t0)/60:.1f} 分）", flush=True)
         time.sleep(stooq_pause)
     print(f"stooq で補えた {got_s} / 試した {tried}", flush=True)
     save(stopped or "全部")
@@ -285,7 +295,9 @@ def merge(shard_dir, out_dir, checks, symbols_file=None):
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "prices.pkl"), "wb") as f:
         pickle.dump({"prices": prices, "market": market}, f, protocol=pickle.HIGHEST_PROTOCOL)
-    need = [s.strip() for s in open(symbols_file)] if (symbols_file and os.path.exists(symbols_file)) else []
+    need = [s.strip() for s in open(symbols_file) if s.strip()] if (symbols_file and os.path.exists(symbols_file)) else []
+    if symbols_file and os.path.exists(symbols_file + ".old"):
+        need += [s.strip() for s in open(symbols_file + ".old") if s.strip()]
     missing = [s for s in need if s not in prices]
     from collections import Counter
     meta = {"source": "yfinance（1 銘柄ずつ・機械を分けて）＋ stooq の 1 銘柄 CSV（Yahoo に無い物）", "tickers": len(prices), "shards": per, "need": len(need), "missing": len(missing), "missing_sample": missing[:50],
@@ -350,8 +362,9 @@ def main():
     if a.shard:
         k, n = [int(x) for x in a.shard.split("/")]
         syms = [s.strip() for s in open(a.symbols) if s.strip()]
+        olds = [s.strip() for s in open(a.symbols + ".old") if s.strip()] if os.path.exists(a.symbols + ".old") else []
         out_pkl = a.shard_out or os.path.join(a.out, "shards", f"prices_shard_{k:02d}.pkl")
-        fetch_shard(syms, k, n, out_pkl, budget_min=a.budget); return
+        fetch_shard(syms, olds, k, n, out_pkl, budget_min=a.budget); return
     if a.merge:
         merge(a.merge, a.out, a.checks, a.symbols); return
     if a.bulk:
