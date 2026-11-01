@@ -194,6 +194,7 @@ jobs:
           name: research-events-${{ github.run_number }}
           path: |
             research/raw/events.parquet
+            research/raw/event_daily.npz
             research/raw/prices_meta.json
           if-no-files-found: warn
           retention-days: 90

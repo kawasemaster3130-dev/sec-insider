@@ -15,7 +15,7 @@ import argparse, json, math, os, sys
 import numpy as np
 import pandas as pd
 
-ANALYZER = "analyze-2.1"
+ANALYZER = "analyze-2.2"
 HORIZONS = [21, 63, 126, 252]
 H_MAIN, H_ALT = 126, 63
 TRAIN_START, TRAIN_END = pd.Timestamp("2006-01-01"), pd.Timestamp("2017-06-30")
@@ -31,6 +31,7 @@ C_SHARE_MAX = 0.15
 P_T3, P_T2 = 0.0027, 0.046
 ROLE_JA = {"CEO": "CEO", "CFO": "CFO", "Chair": "会長", "President": "社長", "Officer": "その他の役員", "Director": "取締役だけ", "TenPct": "大株主だけ", "Other": "その他"}
 ROLE_ORDER_JA = ["CEO", "CFO", "会長", "社長", "その他の役員", "取締役だけ", "大株主だけ", "その他"]
+PRICE_AXES = {"直前63日", "高値からの下落"}
 AXES_FOR_RANK = ["金額", "役職", "クラスター人数", "クラスターの中身", "時価総額", "金額÷時価総額(bp)", "持ち株の増え方", "直前63日", "高値からの下落", "株価の水準",
                  "届け出の遅れ", "保有の種類", "初めてか", "日課か", "連続性", "市場全体の買い", "直近の売り"]
 
@@ -238,6 +239,13 @@ def table_for(D, keys, H, variants):
             out[c] = out[c].fillna(0).astype(int)
     out["c_share_train"] = out["C_train"] / out["N_train"].replace(0, np.nan)
     out["c_share_test"] = out["C_test"] / out["N_test"].replace(0, np.nan)
+    # 株価が要る軸（直前 63 日・高値からの下落）の段では、株価の無いイベントは「不明」の段に落ちるので、段ごとの C は数えられない。
+    # その段の C は「全部のイベントの C の割合」以上と見る（低く見せない）
+    if any(k in PRICE_AXES for k in keys):
+        for pname in ["train", "test"]:
+            Dp = D[D["period"] == pname]
+            overall = float(Dp["noprice"].mean()) if len(Dp) else 0.0
+            out[f"c_share_{pname}"] = np.maximum(out[f"c_share_{pname}"].fillna(0), overall)
     out["subs_positive"] = sum(((out[f"mean_{nm}"] > 0) & (out[f"n_{nm}"] >= SUB_MIN_N)).astype(int) for nm, _, _ in SUBPERIODS)
     out["eligible"] = out["n_train"] >= PASS_N
     out["passed"] = (out["eligible"] & (out["mean_train"] > 0) & (out["t_train"] >= PASS_T) & (out["t_diff_train"] >= PASS_TDIFF) & (out["subs_positive"] == len(SUBPERIODS)))
