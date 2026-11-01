@@ -2,6 +2,7 @@ name: SECインサイダー 検証（総当たり・研究）
 
 # 手で起こす（Actions → この workflow → Run workflow → Branch main）。結果は成果物（Artifacts）に置く。リポジトリには書き込まない。
 # 必要な Secret: EDGAR_UA（SEC に伝える連絡先。例 "ChartMaster sec-insider メール"）
+# 仕事の流れ: 1 台目（prep）が SEC の買いと発行株数を取って銘柄の一覧を作る → 12 台（prices）が株価を分けて取る（Yahoo は 1 つの IP で約 2,000 件しか取れない）→ 1 台（research）が合わせて表を作り評価する
 on:
   workflow_dispatch:
     inputs:
@@ -26,69 +27,146 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  backtest:
+  prep:
+    name: 1. SEC の買い・発行株数・銘柄の一覧
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: 道具を入れる
         run: |
           python -m pip install --upgrade pip
-          pip install "pandas>=2.2" numpy scipy pyarrow yfinance
-
+          pip install "pandas>=2.2" numpy pyarrow
       - name: 月の印（キャッシュの鍵）
         id: date
         run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
-
-      - name: 落としたファイルの保管（SEC の四半期 zip・stooq の一括 zip）
+      - name: 落としたファイルの保管（SEC の四半期 zip）
         uses: actions/cache@v4
         with:
-          path: |
-            research/raw/zips
-            research/raw/d_us_txt.zip
-          key: research-raw-v2-${{ steps.date.outputs.month }}
+          path: research/raw/zips
+          key: research-sec-zips-v3-${{ steps.date.outputs.month }}
           restore-keys: |
-            research-raw-v2-
-
-      - name: 1. SEC の買い（Form 4・P）を取る
+            research-sec-zips-v3-
+      - name: SEC の買い（Form 4・P）を取る
         env:
           EDGAR_UA: ${{ secrets.EDGAR_UA }}
         run: |
           set -o pipefail
           mkdir -p research/raw research/out
           python research/fetch_sec_insider.py --out research/raw --from "${{ inputs.from_year }}" --to "${{ inputs.to_year }}" --keep-zips 2>&1 | tee research/out/log_fetch_sec.txt
-
-      - name: 2. 発行株数（SEC の XBRL）と銘柄の対応表を取る
+      - name: 発行株数（SEC の XBRL）と銘柄の対応表を取る
         env:
           EDGAR_UA: ${{ secrets.EDGAR_UA }}
         run: |
           set -o pipefail
           python research/fetch_shares.py --out research/raw --from 2009 --to "${{ inputs.to_year }}" 2>&1 | tee research/out/log_fetch_shares.txt
-
-      - name: 3. 株価（stooq の一括。取れなければ yfinance で、届け出の銘柄 ＋ SEC の全銘柄）を取る
+      - name: 株価を取る銘柄の一覧を作る
         run: |
           set -o pipefail
-          python research/fetch_prices.py --out research/raw --need research/raw/purchases.parquet --need-tickers research/raw/cik_ticker.parquet --checks research/out/data_checks.md 2>&1 | tee research/out/log_fetch_prices.txt
+          python research/fetch_prices.py --list-symbols --need research/raw/purchases.parquet --need-tickers research/raw/cik_ticker.parquet --symbols research/raw/symbols.txt 2>&1 | tee research/out/log_symbols.txt
+          wc -l research/raw/symbols.txt
+      - name: 中間データを渡す
+        uses: actions/upload-artifact@v4
+        with:
+          name: prep-${{ github.run_number }}
+          path: |
+            research/raw/purchases.parquet
+            research/raw/owners.parquet
+            research/raw/sales.parquet
+            research/raw/amendments.parquet
+            research/raw/shares.parquet
+            research/raw/cik_ticker.parquet
+            research/raw/purchases_meta.json
+            research/raw/fetch_log.txt
+            research/raw/symbols.txt
+            research/raw/symbols.txt.json
+            research/out/log_fetch_sec.txt
+            research/out/log_fetch_shares.txt
+            research/out/log_symbols.txt
+          if-no-files-found: error
+          retention-days: 90
+
+  prices:
+    name: 2. 株価を分けて取る
+    needs: prep
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 道具を入れる
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.2" numpy pyarrow yfinance
+      - uses: actions/download-artifact@v4
+        with:
+          name: prep-${{ github.run_number }}
+          path: research
+      - name: 分担の分を取る（1 銘柄ずつ。Yahoo → 無ければ stooq）
+        run: |
+          set -o pipefail
+          ls research/raw | head -20
+          python -W ignore research/fetch_prices.py --shard ${{ matrix.shard }}/12 --symbols research/raw/symbols.txt --shard-out research/raw/shards/prices_shard_${{ matrix.shard }}.pkl 2>&1 | tee research/out/log_prices_shard_${{ matrix.shard }}.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prices-shard-${{ matrix.shard }}-${{ github.run_number }}
+          path: |
+            research/raw/shards/prices_shard_${{ matrix.shard }}.pkl
+            research/out/log_prices_shard_${{ matrix.shard }}.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+  research:
+    name: 3. 合わせて評価する
+    needs: [prep, prices]
+    if: always() && needs.prep.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 道具を入れる
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.2" numpy scipy pyarrow yfinance
+      - uses: actions/download-artifact@v4
+        with:
+          name: prep-${{ github.run_number }}
+          path: research
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: prices-shard-*-${{ github.run_number }}
+          path: research/shards_in
+          merge-multiple: true
+      - name: 株価を合わせる（prices.pkl）と測る前の確かめ
+        run: |
+          set -o pipefail
+          find research/shards_in -name "*.pkl" | head -20
+          python -W ignore research/fetch_prices.py --merge research/shards_in --out research/raw --symbols research/raw/symbols.txt --checks research/out/data_checks.md 2>&1 | tee research/out/log_merge.txt
           echo "----- data_checks.md -----"; cat research/out/data_checks.md
-
-      - name: 4. イベントの表を作る
+      - name: イベントの表を作る
         run: |
           set -o pipefail
-          python research/build_events.py --raw research/raw --out research/raw/events.parquet --outdir research/out 2>&1 | tee research/out/log_build.txt
-
-      - name: 5. 総当たりで評価する（事前登録どおり）
+          python -W ignore research/build_events.py --raw research/raw --out research/raw/events.parquet --outdir research/out 2>&1 | tee research/out/log_build.txt
+      - name: 総当たりで評価する（事前登録どおり）
         run: |
           set -o pipefail
           ARGS=""
           if [ "${{ inputs.two_axis }}" != "true" ]; then ARGS="$ARGS --no-two-axis"; fi
           if [ "${{ inputs.calendar }}" != "true" ]; then ARGS="$ARGS --no-calendar"; fi
           python -W ignore research/analyze.py --events research/raw/events.parquet --out research/out $ARGS 2>&1 | tee research/out/log_analyze.txt
-
       - name: 結果の要約を画面とログに出す
         if: always()
         run: |
@@ -96,11 +174,10 @@ jobs:
             echo "## 検証の結果（summary.md の先頭）"
             if [ -f research/out/summary.md ]; then head -c 20000 research/out/summary.md; else echo "summary.md が無い（途中で止まった）"; fi
           } >> "$GITHUB_STEP_SUMMARY"
-          for f in research/out/build_meta.json research/out/exclusions.csv research/out/coverage.csv research/out/summary.json research/out/survivorship.csv research/out/predictions.csv research/out/top10.csv research/out/control.csv research/out/calendar_time.csv research/out/axis_effects.csv; do
+          for f in research/raw/prices_meta.json research/out/build_meta.json research/out/exclusions.csv research/out/coverage.csv research/out/summary.json research/out/survivorship.csv research/out/predictions.csv research/out/top10.csv research/out/control.csv research/out/calendar_time.csv research/out/axis_effects.csv; do
             if [ -f "$f" ]; then echo "----- $f -----"; cat "$f"; echo; fi
           done
           if [ -f research/out/summary.md ]; then echo "----- summary.md -----"; cat research/out/summary.md; fi
-
       - name: 結果を成果物に置く（表・要約・ログ）
         if: always()
         uses: actions/upload-artifact@v4
@@ -109,22 +186,13 @@ jobs:
           path: research/out
           if-no-files-found: warn
           retention-days: 90
-
-      - name: 中間データを成果物に置く（買いの行・イベントの表。株価は大きいので置かない）
+      - name: 中間データを成果物に置く（イベントの表。株価は大きいので置かない）
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: research-raw-${{ github.run_number }}
+          name: research-events-${{ github.run_number }}
           path: |
-            research/raw/purchases.parquet
-            research/raw/owners.parquet
-            research/raw/sales.parquet
-            research/raw/amendments.parquet
-            research/raw/shares.parquet
-            research/raw/cik_ticker.parquet
             research/raw/events.parquet
-            research/raw/purchases_meta.json
             research/raw/prices_meta.json
-            research/raw/fetch_log.txt
           if-no-files-found: warn
           retention-days: 90

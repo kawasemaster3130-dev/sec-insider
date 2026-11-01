@@ -1,24 +1,34 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-米国株の日足を stooq の一括ファイル（d_us_txt.zip。無料・鍵なし）から取り、研究で使う形（銘柄ごとの配列）にして保存する。
-一括ファイルが取れないときは、必要な銘柄だけ yfinance で取る（--need に purchases.parquet を渡す）。
+米国株の日足を取る。3 つの使い方（GitHub Actions では 2 → 3 → 4 の順に別々の機械で動かす）。
+  1. 一括: stooq の d_us_txt.zip（2026-11 時点ではログインが要り 401 で取れない。残してある）
+  2. 銘柄の一覧を作る: --list-symbols  … 届け出の会社の今の銘柄（CIK → company_tickers.json）＋ 今の銘柄が無い会社の届け出の銘柄 ＋ SEC の全銘柄（基準の母集団）＋ SPY
+  3. 分けて取る: --shard k/n  … 一覧の k 番目の分だけを、1 銘柄ずつゆっくり yfinance で取る（Yahoo は 1 つの IP から約 2,000 件で止めるので、機械を n 台に分ける）。
+     Yahoo に無い銘柄は stooq の 1 銘柄ずつの CSV（https://stooq.com/q/d/l/?s=xxx.us&i=d）でもう一度引く（上場廃止の会社が残っていることがある）
+  4. 合わせる: --merge dir … 分けて取った物を 1 つの prices.pkl にして、測る前の確かめ（data_checks.md）を書く
 
-使い方: python3 research/fetch_prices.py --out research/raw --need research/raw/purchases.parquet [--zip research/raw/d_us_txt.zip]
-出す物: research/raw/prices.pkl  = {"prices": {"TICKER": {"d": int32 の日付(YYYYMMDD), "o","c","v": float32}}, "market": {"TICKER": "zip の中のフォルダ名"}}
-        research/raw/prices_meta.json = 銘柄数・期間・取り方・フォルダの数
-        research/out/data_checks.md   = 測る前の確かめ（上場廃止 5 社があるか、分割・配当・出来高の直し方）
-注意: stooq の値段は分割で直されている（配当は入っていないと見る）。上場廃止の会社は入っていないことがある（研究の報告に書く）。
+出す物: prices.pkl = {"prices": {"TICKER": {"d": int32 の日付(YYYYMMDD), "o","c","v": float32}}, "market": {"TICKER": 出どころ}}
+        prices_meta.json、research/out/data_checks.md
+注意: Yahoo・stooq の終値は分割で直されている（配当は入っていない）。Yahoo には今ある銘柄しか無いので、上場廃止の会社は抜けやすい（研究の報告に A/B/C で書く）。
 """
-import argparse, io, json, os, pickle, re, sys, time, warnings, zipfile
-import urllib.request
+import argparse, glob, io, json, os, pickle, re, sys, time, warnings, zipfile
+import urllib.request, urllib.error
 import numpy as np
 
 warnings.filterwarnings("ignore")
-
 BULK_URLS = ["https://static.stooq.com/db/h/d_us_txt.zip", "https://stooq.com/db/h/d_us_txt.zip"]
 UA = "Mozilla/5.0 (sec-insider research; contact via GitHub kawasemaster3130-dev/sec-insider)"
 DELISTED_CHECK = ["LEH", "WM", "SHLD", "BBBY", "SIVB", "WAMUQ", "SHLDQ", "BBBYQ", "SIVBQ", "LEHMQ"]
+STOOQ_LIMIT_WORDS = ("exceeded", "limit", "przekroczon")
+
+
+def norm_symbol(s):
+    s = str(s).strip().upper()
+    if not s or s in ("N/A", "NONE", "NA", "NULL", "-", "NAN"):
+        return ""
+    s = s.split(",")[0].split(" ")[0].split("/")[0].replace(".", "-")
+    return s if re.fullmatch(r"[A-Z0-9-]{1,10}", s) else ""
 
 
 def download(url, path, timeout=900):
@@ -34,95 +44,170 @@ def download(url, path, timeout=900):
 
 
 def parse_stooq_txt(raw):
-    """<TICKER>,<PER>,<DATE>,<TIME>,<OPEN>,<HIGH>,<LOW>,<CLOSE>,<VOL>,<OPENINT>"""
+    """stooq の CSV: Date,Open,High,Low,Close,Volume（一括は <TICKER>,<PER>,<DATE>,<TIME>,<OPEN>,…）"""
     txt = raw.decode("utf-8", errors="replace")
-    lines = txt.splitlines()
+    lines = [ln for ln in txt.splitlines() if ln.strip()]
     if len(lines) < 2:
         return None
-    head = [h.strip("<>").upper() for h in lines[0].split(",")]
-    try:
-        iD, iO, iC, iV = head.index("DATE"), head.index("OPEN"), head.index("CLOSE"), head.index("VOL")
-    except ValueError:
+    head = [h.strip("<>").strip().upper() for h in lines[0].split(",")]
+    def idx(*names):
+        for nm in names:
+            if nm in head:
+                return head.index(nm)
+        return None
+    iD, iO, iC, iV = idx("DATE"), idx("OPEN"), idx("CLOSE"), idx("VOL", "VOLUME")
+    if iD is None or iC is None:
         return None
     d, o, c, v = [], [], [], []
     for ln in lines[1:]:
         p = ln.split(",")
-        if len(p) <= max(iD, iO, iC, iV):
+        if len(p) <= max(iD, iC):
             continue
         try:
-            dd = int(p[iD]); cc = float(p[iC]); oo = float(p[iO]) if p[iO] else cc; vv = float(p[iV]) if p[iV] else 0.0
+            ds = p[iD].strip().replace("-", "")
+            dd = int(ds); cc = float(p[iC])
+            oo = float(p[iO]) if (iO is not None and len(p) > iO and p[iO]) else cc
+            vv = float(p[iV]) if (iV is not None and len(p) > iV and p[iV]) else 0.0
         except ValueError:
             continue
-        if cc <= 0:
+        if cc <= 0 or dd < 19000101:
             continue
         d.append(dd); o.append(oo); c.append(cc); v.append(vv)
-    if not d:
+    if len(d) < 20:
         return None
     d = np.asarray(d, dtype=np.int32); order = np.argsort(d, kind="stable")
-    d = d[order]; keep = np.concatenate([[True], d[1:] != d[:-1]])  # 同じ日の重複は最初だけ
+    d = d[order]; keep = np.concatenate([[True], d[1:] != d[:-1]])
     return {"d": d[keep], "o": np.asarray(o, dtype=np.float32)[order][keep], "c": np.asarray(c, dtype=np.float32)[order][keep], "v": np.asarray(v, dtype=np.float32)[order][keep]}
 
 
-def norm_symbol(s):
-    s = str(s).strip().upper()
-    if not s or s in ("N/A", "NONE", "NA", "NULL", "-", "NAN"):
-        return ""
-    s = s.split(",")[0].split(" ")[0].split("/")[0].replace(".", "-")
-    return s if re.fullmatch(r"[A-Z0-9-]{1,10}", s) else ""
-
-
-def need_symbols(path, tickers_path=None):
-    """必要な銘柄 = 届け出の銘柄コード（purchases.parquet）＋ SEC の全銘柄（cik_ticker.parquet。基準の母集団）＋ SPY"""
+# ----------------------------------------------------------------------------- 2. 銘柄の一覧
+def list_symbols(purchases_path, tickers_path, out_path):
     import pandas as pd
-    syms = set()
-    if path and os.path.exists(path):
-        P = pd.read_parquet(path, columns=["symbol"])
-        syms |= {norm_symbol(x) for x in P["symbol"].dropna().unique()}
+    P = pd.read_parquet(purchases_path, columns=["issuer_cik", "symbol"])
+    P["issuer_cik"] = pd.to_numeric(P["issuer_cik"], errors="coerce")
+    cik2t = {}
     if tickers_path and os.path.exists(tickers_path):
-        T = pd.read_parquet(tickers_path, columns=["ticker"])
-        syms |= {norm_symbol(x) for x in T["ticker"].dropna().unique()}
-    syms.discard("")
-    syms.add("SPY")
-    return sorted(syms)
-
-
-def yf_fetch(symbols, batch=60, pause=0.5, rename=None):
-    """yfinance でまとめて取る（分割で直した終値 Close、出来高 Volume）。rename = {取りに行く銘柄: 保存する鍵}（倒産後の Q 付き銘柄を元の鍵で保存する）"""
-    import yfinance as yf
-    import pandas as pd
-    out = {}
-    rename = rename or {}
-    for i in range(0, len(symbols), batch):
-        chunk = symbols[i:i + batch]
-        df = None
-        for attempt in range(3):
-            try:
-                df = yf.download(chunk, period="max", interval="1d", auto_adjust=False, progress=False, threads=True, group_by="ticker")
-                break
-            except Exception as e:
-                print(f"[warn] yfinance {chunk[0]}〜: {e}", flush=True); time.sleep(pause * 10 * (attempt + 1))
-        if df is None or len(df) == 0:
+        T = pd.read_parquet(tickers_path, columns=["cik", "ticker"])
+        for c, t in zip(T["cik"].astype(int), T["ticker"].astype(str)):
+            t = norm_symbol(t)
+            if t and c not in cik2t:
+                cik2t[c] = t
+    current, old = set(), set()
+    for cik, g in P.groupby("issuer_cik"):
+        if pd.isna(cik):
             continue
-        for tk in chunk:
+        t = cik2t.get(int(cik))
+        if t:
+            current.add(t)
+        else:
+            old |= {norm_symbol(x) for x in g["symbol"].dropna().unique()}
+    old.discard("")
+    universe = set(cik2t.values())
+    syms = sorted((current | universe | old | {"SPY"}) - {""})
+    # 先に優先の高い物（SPY・今の銘柄）、後に古い銘柄。分けたときに偏らないよう、並びは名前順
+    with open(out_path, "w") as f:
+        f.write("\n".join(syms) + "\n")
+    meta = {"current_issuers": len(current), "old_symbols": len(old), "sec_universe": len(universe), "total": len(syms)}
+    json.dump(meta, open(out_path + ".json", "w"), indent=1)
+    print(f"銘柄の一覧: {meta}", flush=True)
+    return syms
+
+
+# ----------------------------------------------------------------------------- 3. 分けて取る
+class RateLimited(Exception):
+    pass
+
+
+def yf_one(sym):
+    """Yahoo から 1 銘柄。終値 Close は分割で直されている（配当は入っていない）。Yahoo が止めたら RateLimited を投げる
+    （yf.download は止められても例外を出さずに空を返すので、例外を出す Ticker.history(raise_errors=True) を使う）"""
+    import yfinance as yf
+    try:
+        df = yf.Ticker(sym).history(period="max", interval="1d", auto_adjust=False, actions=False, raise_errors=True)
+    except Exception as e:
+        msg = str(e)
+        if "Too Many Requests" in msg or "ate limit" in msg or "429" in msg:
+            raise RateLimited(msg)
+        return None
+    if df is None or len(df) == 0 or "Close" not in df.columns:
+        return None
+    try:
+        df = df.dropna(subset=["Close"]); df = df[df["Close"] > 0]
+        if len(df) < 20:
+            return None
+        idx = df.index.tz_localize(None) if getattr(df.index, "tz", None) is not None else df.index
+        d = np.asarray([int(x.strftime("%Y%m%d")) for x in idx], dtype=np.int32)
+        order = np.argsort(d, kind="stable"); d = d[order]; keep = np.concatenate([[True], d[1:] != d[:-1]])
+        o = df["Open"].to_numpy(dtype=np.float32).ravel() if "Open" in df.columns else df["Close"].to_numpy(dtype=np.float32).ravel()
+        v = df["Volume"].to_numpy(dtype=np.float32).ravel() if "Volume" in df.columns else np.zeros(len(df), dtype=np.float32)
+        return {"d": d[keep], "o": o[order][keep], "c": df["Close"].to_numpy(dtype=np.float32).ravel()[order][keep], "v": v[order][keep]}
+    except Exception:
+        return None
+
+
+def stooq_one(sym):
+    """stooq の 1 銘柄 CSV。('ok', rec) / ('none', None) / ('limit', None)"""
+    url = f"https://stooq.com/q/d/l/?s={sym.lower()}.us&i=d"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            raw = r.read()
+    except Exception:
+        return "none", None
+    low = raw[:400].decode("utf-8", errors="replace").lower()
+    if any(w in low for w in STOOQ_LIMIT_WORDS):
+        return "limit", None
+    rec = parse_stooq_txt(raw)
+    return ("ok", rec) if rec is not None else ("none", None)
+
+
+def fetch_shard(symbols, k, n, out_pkl, yf_pause=0.6, stooq_pause=1.2, stooq_cap=600):
+    mine = [s for i, s in enumerate(symbols) if i % n == k]
+    if k == 0 and "SPY" not in mine:
+        mine = ["SPY"] + mine
+    print(f"分担 {k}/{n}: {len(mine):,} 銘柄", flush=True)
+    prices, market = {}, {}
+    t0 = time.time(); limited = 0; done = 0
+    for sym in mine:
+        for attempt in range(4):
             try:
-                sub = df[tk] if isinstance(df.columns, pd.MultiIndex) else df
-                sub = sub.dropna(subset=["Close"])
-                sub = sub[sub["Close"] > 0]
-                if len(sub) < 20:
-                    continue
-                d = np.asarray([int(x.strftime("%Y%m%d")) for x in sub.index], dtype=np.int32)
-                order = np.argsort(d, kind="stable"); d = d[order]
-                keep = np.concatenate([[True], d[1:] != d[:-1]])
-                rec = {"d": d[keep], "o": sub["Open"].to_numpy(dtype=np.float32).ravel()[order][keep], "c": sub["Close"].to_numpy(dtype=np.float32).ravel()[order][keep], "v": sub["Volume"].to_numpy(dtype=np.float32).ravel()[order][keep]}
-                out[rename.get(tk, tk)] = rec
-            except Exception:
-                pass
-        if (i // batch) % 10 == 0:
-            print(f"  yfinance {i + len(chunk):,}/{len(symbols):,} … 取れた {len(out):,}", flush=True)
-        time.sleep(pause)
-    return out
+                rec = yf_one(sym)
+                limited = 0
+                break
+            except RateLimited:
+                limited += 1
+                wait = 60 * (attempt + 1)
+                print(f"  Yahoo が止めた（{sym}）。{wait} 秒待つ", flush=True)
+                time.sleep(wait)
+                rec = None
+        else:
+            print("  Yahoo が止め続けるので、この分担の Yahoo はここまで", flush=True)
+            break
+        if rec is not None:
+            prices[sym] = rec; market[sym] = "yfinance stocks"
+        done += 1
+        if done % 200 == 0:
+            print(f"  yfinance {done:,}/{len(mine):,} … 取れた {len(prices):,}（{(time.time()-t0)/60:.1f} 分）", flush=True)
+        time.sleep(yf_pause)
+    missing = [s for s in mine if s not in prices]
+    print(f"Yahoo で取れた {len(prices):,} / {len(mine):,}。無い {len(missing):,} を stooq の 1 銘柄 CSV で引く（上限 {stooq_cap}）", flush=True)
+    got_s = 0; tried = 0
+    for sym in missing[:stooq_cap]:
+        st, rec = stooq_one(sym)
+        tried += 1
+        if st == "limit":
+            print(f"  stooq が止めた（{tried} 件目）。ここまで", flush=True); break
+        if rec is not None:
+            prices[sym] = rec; market[sym] = "stooq stocks (per-symbol)"; got_s += 1
+        time.sleep(stooq_pause)
+    print(f"stooq で補えた {got_s} / 試した {tried}", flush=True)
+    os.makedirs(os.path.dirname(out_pkl) or ".", exist_ok=True)
+    with open(out_pkl, "wb") as f:
+        pickle.dump({"prices": prices, "market": market, "shard": [k, n], "mine": len(mine)}, f, protocol=pickle.HIGHEST_PROTOCOL)
+    print(f"終了: {out_pkl} に {len(prices):,} 銘柄（{(time.time()-t0)/60:.1f} 分）", flush=True)
 
 
+# ----------------------------------------------------------------------------- 4. 合わせる・確かめ
 def nearest(rec, dint):
     k = int(np.searchsorted(rec["d"], dint, side="right")) - 1
     return k if k >= 0 else None
@@ -133,7 +218,7 @@ def write_checks(prices, market, out_md, source):
     L.append("## 上場廃止になった会社が入っているか（LEH・WM・SHLD・BBBY・SIVB と、廃止後の Q 付きの銘柄）")
     for t in DELISTED_CHECK:
         if t in prices:
-            L.append(f"- {t}: ある（{prices[t]['d'][0]}〜{prices[t]['d'][-1]}、{len(prices[t]['d'])} 日）")
+            L.append(f"- {t}: ある（{prices[t]['d'][0]}〜{prices[t]['d'][-1]}、{len(prices[t]['d'])} 日。出どころ {market.get(t, '')}）")
         else:
             L.append(f"- {t}: 無い")
     L.append("\n## 分割の直し方（AAPL 2020-08-31 の 4 分割。直されていれば 8/28 と 8/31 の終値はほぼ同じ水準、出来高も直されていれば 8/28 の出来高は約 1.9 億）")
@@ -164,94 +249,106 @@ def write_checks(prices, market, out_md, source):
     L.append(f"- 銘柄数 {len(prices):,}、最後の日の最大 {int(alld_last.max())}、最後の日が最大より 10 日以上前の銘柄（上場廃止・銘柄変更の疑い） {int((alld_last < int(alld_last.max()) - 10).sum()):,}")
     from collections import Counter
     for folder, n in Counter(market.values()).most_common(30):
-        L.append(f"- フォルダ {folder}: {n:,} 銘柄")
-    os.makedirs(os.path.dirname(out_md), exist_ok=True)
+        L.append(f"- 出どころ {folder}: {n:,} 銘柄")
+    os.makedirs(os.path.dirname(out_md) or ".", exist_ok=True)
     open(out_md, "w", encoding="utf-8").write("\n".join(L) + "\n")
+
+
+def merge(shard_dir, out_dir, checks, symbols_file=None):
+    prices, market = {}, {}
+    files = sorted(glob.glob(os.path.join(shard_dir, "**", "prices_shard_*.pkl"), recursive=True))
+    print(f"分担のファイル {len(files)} 個", flush=True)
+    per = []
+    for p in files:
+        with open(p, "rb") as f:
+            d = pickle.load(f)
+        prices.update(d["prices"]); market.update(d["market"]); per.append((os.path.basename(p), len(d["prices"]), d.get("mine")))
+    if "SPY" not in prices:
+        print("SPY が無いので 1 回だけ取り直す", flush=True)
+        try:
+            rec = yf_one("SPY")
+            if rec is not None:
+                prices["SPY"] = rec; market["SPY"] = "yfinance etf"
+        except RateLimited:
+            pass
+        if "SPY" not in prices:
+            st, rec = stooq_one("SPY")
+            if rec is not None:
+                prices["SPY"] = rec; market["SPY"] = "stooq etf (per-symbol)"
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "prices.pkl"), "wb") as f:
+        pickle.dump({"prices": prices, "market": market}, f, protocol=pickle.HIGHEST_PROTOCOL)
+    need = [s.strip() for s in open(symbols_file)] if (symbols_file and os.path.exists(symbols_file)) else []
+    missing = [s for s in need if s not in prices]
+    from collections import Counter
+    meta = {"source": "yfinance（1 銘柄ずつ・機械を分けて）＋ stooq の 1 銘柄 CSV（Yahoo に無い物）", "tickers": len(prices), "shards": per, "need": len(need), "missing": len(missing), "missing_sample": missing[:50],
+            "by_source": dict(Counter(market.values())), "spy": "SPY" in prices}
+    if prices:
+        alld = np.concatenate([p["d"] for p in prices.values()]); meta.update({"first": int(alld.min()), "last": int(alld.max())})
+    json.dump(meta, open(os.path.join(out_dir, "prices_meta.json"), "w"), ensure_ascii=False, indent=1)
+    write_checks(prices, market, checks, meta["source"])
+    print("終了:", json.dumps({k: v for k, v in meta.items() if k not in ("missing_sample", "shards")}, ensure_ascii=False), flush=True)
+    if "SPY" not in prices:
+        print("SPY が無い", file=sys.stderr); sys.exit(3)
+
+
+# ----------------------------------------------------------------------------- 1. 一括（残してある）
+def bulk(zpath, out_dir, checks):
+    prices, market = {}, {}
+    ok = os.path.exists(zpath) and os.path.getsize(zpath) > 1_000_000
+    if not ok:
+        for u in BULK_URLS:
+            try:
+                n = download(u, zpath); print(f"取った: {u} {n:,} bytes", flush=True)
+                if n > 1_000_000:
+                    ok = True; break
+            except Exception as e:
+                print(f"[warn] {u}: {e}", flush=True)
+    if not ok:
+        print("一括ファイルが取れなかった", file=sys.stderr); sys.exit(3)
+    with zipfile.ZipFile(zpath) as z:
+        names = [n for n in z.namelist() if n.lower().endswith(".txt")]
+        for n in names:
+            m = re.match(r"^(.+?)\.us\.txt$", os.path.basename(n).lower())
+            if not m:
+                continue
+            with z.open(n) as fh:
+                rec = parse_stooq_txt(fh.read())
+            if rec is not None:
+                tk = m.group(1).upper().replace(".", "-"); prices[tk] = rec; market[tk] = os.path.dirname(n).lower().replace("data/daily/us/", "")
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "prices.pkl"), "wb") as f:
+        pickle.dump({"prices": prices, "market": market}, f, protocol=pickle.HIGHEST_PROTOCOL)
+    json.dump({"source": "stooq d_us_txt.zip", "tickers": len(prices)}, open(os.path.join(out_dir, "prices_meta.json"), "w"))
+    write_checks(prices, market, checks, "stooq d_us_txt.zip")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="research/raw")
-    ap.add_argument("--zip", default=None, help="既に落とした d_us_txt.zip の場所")
-    ap.add_argument("--need", default=None, help="必要な銘柄の一覧（purchases.parquet）。一括が取れないときの yfinance の対象にもなる")
-    ap.add_argument("--need-tickers", default=None, help="SEC の全銘柄の表（cik_ticker.parquet）。基準の母集団と、CIK から引く今の銘柄のために取る")
-    ap.add_argument("--yf-missing", type=int, default=0, help="一括で取れても、無い銘柄を yfinance で最大 N 銘柄だけ補う（0 なら補わない）")
     ap.add_argument("--checks", default="research/out/data_checks.md")
+    ap.add_argument("--list-symbols", action="store_true", help="銘柄の一覧を作る（--need と --need-tickers から）")
+    ap.add_argument("--need", default="research/raw/purchases.parquet")
+    ap.add_argument("--need-tickers", default="research/raw/cik_ticker.parquet")
+    ap.add_argument("--symbols", default="research/raw/symbols.txt")
+    ap.add_argument("--shard", default=None, help="k/n。一覧の k 番目の分だけ取る")
+    ap.add_argument("--shard-out", default=None, help="分担の結果の置き場（既定 research/raw/shards/prices_shard_k.pkl）")
+    ap.add_argument("--merge", default=None, help="分担の結果が入った場所。合わせて prices.pkl を作る")
+    ap.add_argument("--bulk", action="store_true", help="stooq の一括を試す（今は取れない）")
+    ap.add_argument("--zip", default=None)
     a = ap.parse_args()
-    os.makedirs(a.out, exist_ok=True)
-    zpath = a.zip or os.path.join(a.out, "d_us_txt.zip")
-    meta = {"source": "", "yf_filled": 0}
-    prices, market = {}, {}
-    bulk_ok = os.path.exists(zpath) and os.path.getsize(zpath) > 1_000_000
-    if not bulk_ok:
-        for u in BULK_URLS:
-            try:
-                n = download(u, zpath); print(f"取った: {u} {n:,} bytes", flush=True)
-                if n > 1_000_000:
-                    bulk_ok = True; meta["url"] = u; break
-            except Exception as e:
-                print(f"[warn] {u}: {e}", flush=True)
-    if bulk_ok:
-        try:
-            with zipfile.ZipFile(zpath) as z:
-                names = [n for n in z.namelist() if n.lower().endswith(".txt")]
-                print(f"zip の中のファイル: {len(names):,}", flush=True)
-                for i, n in enumerate(names):
-                    base = os.path.basename(n).lower()
-                    m = re.match(r"^(.+?)\.us\.txt$", base)
-                    if not m:
-                        continue
-                    tk = m.group(1).upper().replace(".", "-")
-                    try:
-                        with z.open(n) as fh:
-                            rec = parse_stooq_txt(fh.read())
-                    except Exception:
-                        rec = None
-                    if rec is not None and len(rec["d"]) >= 20:
-                        prices[tk] = rec
-                        market[tk] = os.path.dirname(n).lower().replace("data/daily/us/", "")
-                    if (i + 1) % 2000 == 0:
-                        print(f"  {i+1:,}/{len(names):,} … 銘柄 {len(prices):,}", flush=True)
-            meta["source"] = "stooq d_us_txt.zip"
-            print(f"stooq から読めた銘柄: {len(prices):,}", flush=True)
-        except zipfile.BadZipFile:
-            print("[warn] zip が壊れている（ログイン画面の HTML などの可能性）", flush=True); bulk_ok = False
-            try:
-                os.remove(zpath)
-            except OSError:
-                pass
-    need = need_symbols(a.need, a.need_tickers) if (a.need or a.need_tickers) else []
-    missing = [s for s in need if s not in prices]
-    if need:
-        meta["need"] = len(need); meta["need_found"] = len(need) - len(missing)
-        print(f"必要な銘柄 {len(need):,} のうち無い物 {len(missing):,}", flush=True)
-    if not bulk_ok and need:
-        print("一括ファイルが取れないので yfinance で必要な銘柄だけ取る（届け出の銘柄 ＋ SEC の全銘柄）", flush=True)
-        got = yf_fetch(missing)
-        prices.update(got); market.update({t: "yfinance stocks" for t in got})
-        # 無かった届け出の銘柄は、倒産後の店頭の銘柄（末尾 Q）でもう一度取り、元の鍵で保存する
-        still = [s for s in missing if s not in prices and len(s) <= 4]
-        if still:
-            qmap = {s + "Q": s for s in still}
-            gotq = yf_fetch(sorted(qmap.keys()), rename=qmap)
-            prices.update(gotq); market.update({t: "yfinance stocks (Q)" for t in gotq}); meta["yf_q_filled"] = len(gotq)
-            print(f"末尾 Q の銘柄で補えた物: {len(gotq):,} / {len(still):,}", flush=True)
-        meta["source"] = "yfinance（stooq の一括が取れなかった）"; meta["yf_filled"] = len(got)
-    elif a.yf_missing > 0 and missing:
-        got = yf_fetch(missing[: a.yf_missing])
-        prices.update(got); market.update({t: "yfinance stocks" for t in got}); meta["yf_filled"] = len(got)
-    if "SPY" not in prices:
-        print("SPY が無い。市場のものさしが作れない", file=sys.stderr)
-        if not prices:
-            sys.exit(3)
-    with open(os.path.join(a.out, "prices.pkl"), "wb") as f:
-        pickle.dump({"prices": prices, "market": market}, f, protocol=pickle.HIGHEST_PROTOCOL)
-    alld = np.concatenate([p["d"] for p in prices.values()]) if prices else np.array([0])
-    missing2 = [s for s in need if s not in prices]
-    meta.update({"tickers": len(prices), "first": int(alld.min()), "last": int(alld.max()), "missing": len(missing2), "missing_sample": missing2[:50]})
-    json.dump(meta, open(os.path.join(a.out, "prices_meta.json"), "w"), ensure_ascii=False, indent=1)
-    write_checks(prices, market, a.checks, meta["source"])
-    print("終了:", json.dumps({k: v for k, v in meta.items() if k != "missing_sample"}, ensure_ascii=False), flush=True)
+    if a.list_symbols:
+        list_symbols(a.need, a.need_tickers, a.symbols); return
+    if a.shard:
+        k, n = [int(x) for x in a.shard.split("/")]
+        syms = [s.strip() for s in open(a.symbols) if s.strip()]
+        out_pkl = a.shard_out or os.path.join(a.out, "shards", f"prices_shard_{k:02d}.pkl")
+        fetch_shard(syms, k, n, out_pkl); return
+    if a.merge:
+        merge(a.merge, a.out, a.checks, a.symbols); return
+    if a.bulk:
+        bulk(a.zip or os.path.join(a.out, "d_us_txt.zip"), a.out, a.checks); return
+    ap.print_help()
 
 
 if __name__ == "__main__":
