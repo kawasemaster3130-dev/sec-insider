@@ -12,7 +12,7 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 
-BUILDER = "build_events-2.0"
+BUILDER = "build_events-2.1"
 HORIZONS = [21, 63, 126, 252]
 H_MAIN = 126
 ROLE_ORDER = ["CEO", "Chair", "President", "CFO", "Officer", "Director", "TenPct", "Other"]
@@ -382,6 +382,7 @@ def main():
     cuts_by_year = {}; bench_daily = np.zeros((6, G), dtype=np.float64)
     # 買い持ちの基準: 階級 q の銘柄を t に買って t+H に売ったときの平均リターン（Barber・Lyon 1997 の買い持ちの対照）。日次の等金額指数を複利にすると、ばらつきの大きい株の買い持ちより低く出る（分散の半分の分）ので、対照も買い持ちにする
     bh = {q: {h: np.full(G, np.nan) for h in HORIZONS} for q in range(6)}
+    bench_clipped = {q: {h: [] for h in HORIZONS} for q in range(6)}
     for y in years:
         ymask = (grid >= y * 10000 + 101) & (grid <= y * 10000 + 1231)
         prev_idx = np.where(grid < y * 10000 + 101)[0]
@@ -416,12 +417,19 @@ def main():
                     continue
                 with np.errstate(all="ignore"), warnings.catch_warnings():
                     warnings.simplefilter("ignore", RuntimeWarning)
-                    ratio = Mp[:, tt + h] / Mp[:, tt]
+                    start = Mp[:, tt]
+                    ratio = Mp[:, tt + h] / start
+                    # 10 セント未満の株は数えない（値が粗く、×100 の動きが平均を壊す）。1 銘柄のリターンは +300% で頭を切る（winsorize）
+                    ratio = np.where(start < 0.10, np.nan, ratio)
+                    clipped = np.nanmean((ratio > 4.0).astype(np.float64)) if np.isfinite(ratio).any() else 0.0
+                    bench_clipped[q][h].append(float(clipped))
+                    ratio = np.minimum(ratio, 4.0)
                     bh[q][h][tt] = np.nanmean(ratio, axis=0) - 1.0
     del CP
     bench = np.cumprod(1.0 + bench_daily, axis=1)
     spy_daily = np.concatenate([[0.0], spy_c[1:] / spy_c[:-1] - 1.0])
     meta["benchmark_years_with_quintiles"] = sorted(cuts_by_year.keys())
+    meta["benchmark_share_clipped_at_300pct"] = {f"q{q}_H{h}": (float(np.mean(v)) if v else None) for q in range(6) for h, v in bench_clipped[q].items()}
 
     # ---- イベントごと: 入る日（D の次のものさしの営業日。株に値が無ければ 3 日まで待つ）、D までの特徴、H 日後のリターン
     n = len(E)

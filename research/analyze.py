@@ -15,7 +15,7 @@ import argparse, json, math, os, sys
 import numpy as np
 import pandas as pd
 
-ANALYZER = "analyze-2.0"
+ANALYZER = "analyze-2.1"
 HORIZONS = [21, 63, 126, 252]
 H_MAIN, H_ALT = 126, 63
 TRAIN_START, TRAIN_END = pd.Timestamp("2006-01-01"), pd.Timestamp("2017-06-30")
@@ -214,23 +214,30 @@ def table_for(D, keys, H, variants):
     for nm, s0, s1 in SUBPERIODS:
         st = cell_means(R[R["sub"] == nm], keys).rename(columns={"n": f"n_{nm}", "mean": f"mean_{nm}"})
         out = out.merge(st, on=keys, how="left")
-    # A（結果あり）・B（途中で株価が終わる）・C（最初から引けない）・R（まだ結果が出ていない）の数。学習・検定
+    # A（主要の枠で結果あり）・B（主要の枠で途中で株価が終わる）・R（主要の枠でまだ結果が出ていない）・C（最初から株価が引けない。枠は分からないので全部のイベントの中で数える）・N（その段の全部のイベント）。学習・検定
     for pname in ["train", "test"]:
         Mp = M[M["period"] == pname]
-        cnt = Mp.groupby(keys, observed=True).agg(A=("has_ret", "sum"), B=("trunc", "sum"), C=("noprice", "sum"), Rp=("pending", "sum")).reset_index()
+        cnt = Mp.groupby(keys, observed=True).agg(A=("has_ret", "sum"), B=("trunc", "sum"), Rp=("pending", "sum")).reset_index()
         for k in keys:
             cnt[k] = cnt[k].astype(str)
-        cnt = cnt.rename(columns={"A": f"A_{pname}", "B": f"B_{pname}", "C": f"C_{pname}", "Rp": f"R_{pname}"})
+        cnt = cnt.rename(columns={"A": f"A_{pname}", "B": f"B_{pname}", "Rp": f"R_{pname}"})
         out = out.merge(cnt, on=keys, how="left")
+        Dp = D[D["period"] == pname]
+        cc = Dp.groupby(keys, observed=True).agg(C=("noprice", "sum"), N=("noprice", "size")).reset_index()
+        for k in keys:
+            cc[k] = cc[k].astype(str)
+        cc = cc.rename(columns={"C": f"C_{pname}", "N": f"N_{pname}"})
+        out = out.merge(cc, on=keys, how="left")
     for vn, Dv in variants.items():
         Mv = Dv[(Dv["tier"] == "主要") & Dv["has_ret"]]
         for pname in ["train", "test"]:
             st = cell_means(Mv[Mv["period"] == pname], keys).rename(columns={"n": f"n_{pname}_{vn}", "mean": f"mean_{pname}_{vn}"})
             out = out.merge(st, on=keys, how="left")
     for c in out.columns:
-        if c.startswith(("n_", "A_", "B_", "C_", "R_", "months_", "n_dedup_")):
+        if c.startswith(("n_", "A_", "B_", "C_", "R_", "N_", "months_", "n_dedup_")):
             out[c] = out[c].fillna(0).astype(int)
-    out["c_share_train"] = out["C_train"] / (out["A_train"] + out["B_train"] + out["C_train"] + out["R_train"]).replace(0, np.nan)
+    out["c_share_train"] = out["C_train"] / out["N_train"].replace(0, np.nan)
+    out["c_share_test"] = out["C_test"] / out["N_test"].replace(0, np.nan)
     out["subs_positive"] = sum(((out[f"mean_{nm}"] > 0) & (out[f"n_{nm}"] >= SUB_MIN_N)).astype(int) for nm, _, _ in SUBPERIODS)
     out["eligible"] = out["n_train"] >= PASS_N
     out["passed"] = (out["eligible"] & (out["mean_train"] > 0) & (out["t_train"] >= PASS_T) & (out["t_diff_train"] >= PASS_TDIFF) & (out["subs_positive"] == len(SUBPERIODS)))
@@ -411,8 +418,8 @@ def main():
     top = top.head(10).copy(); top.insert(0, "順位", range(1, len(top) + 1))
     top["検定○の数"] = top["test_same_sign"].astype(int) + top["test_net_positive"].astype(int) + top["test_t_ok"].astype(int)
     keep_cols = ["順位", "区分", "kind", "axes", "cell", "n_train", "mean_train", "median_train", "win_train", "p10_train", "share_m50_train", "trim_mean_train", "ex_top_months_mean_train", "t_train", "diff_train", "t_diff_train",
-                 "subs_positive", "events_per_year_train", "n_dedup_train", "A_train", "B_train", "C_train", "c_share_train",
-                 "n_test", "mean_test", "median_test", "win_test", "p10_test", "share_m50_test", "trim_mean_test", "ex_top_months_mean_test", "t_test", "t_diff_test", "events_per_year_test", "n_dedup_test", "A_test", "B_test", "C_test",
+                 "subs_positive", "events_per_year_train", "n_dedup_train", "A_train", "B_train", "C_train", "N_train", "c_share_train",
+                 "n_test", "mean_test", "median_test", "win_test", "p10_test", "share_m50_test", "trim_mean_test", "ex_top_months_mean_test", "t_test", "t_diff_test", "events_per_year_test", "n_dedup_test", "A_test", "B_test", "C_test", "N_test", "c_share_test",
                  "test_same_sign", "test_net_positive", "test_t_ok", "検定○の数", "unstable", "unstable_detail"] + [c for c in ALL.columns if c.startswith("mean_train_") or c.startswith("mean_test_")]
     top[[c for c in keep_cols if c in top.columns]].to_csv(os.path.join(a.out, "top10.csv"), index=False)
     passed[[c for c in keep_cols if c in passed.columns and c not in ("順位", "区分", "検定○の数")]].to_csv(os.path.join(a.out, "passed.csv"), index=False)
@@ -459,7 +466,7 @@ def main():
     # ---- 上場廃止の抜け（年ごと・売買代金の階級ごと・10 選の段ごと）
     M = D[D["tier"] == "主要"]
     surv = []
-    for name, grp in [("年", M.groupby("year")), ("売買代金の階級", M.groupby("adv_q")), ("時価総額", M.groupby("時価総額", observed=True))]:
+    for name, grp in [("年", D.groupby("year")), ("売買代金の階級（不明 = 株価なし）", D.groupby("adv_q")), ("時価総額", D.groupby("時価総額", observed=True)), ("枠", D.groupby("tier"))]:
         for k, g in grp:
             tot = len(g)
             surv.append({"区切り": name, "値": str(k), "イベント": tot, "A 結果あり": int(g["has_ret"].sum()), "B 途中で終わる": int(g["trunc"].sum()), "C 引けない": int(g["noprice"].sum()), "R まだ": int(g["pending"].sum()),
@@ -509,8 +516,8 @@ def main():
         return num / den if den else np.nan
     preds = []
     tr, te = ctrl_val("train", "費用後の平均"), ctrl_val("test", "費用後の平均")
-    A_share_train = M[M["period"] == "train"]["has_ret"].sum() / max(((M["period"] == "train") & ~M["pending"]).sum(), 1)
-    A_share_train = float(A_share_train) if len(M) else 0.0
+    Dtr = D[(D["period"] == "train") & ~D["pending"]]
+    A_share_train = float(Dtr["has_ret"].sum() / max(len(Dtr), 1)) if len(Dtr) else 0.0
     ok1 = None if A_share_train < 0.85 else (bool(0.01 <= tr <= 0.03 and 0.0 <= te <= 0.02) if not (np.isnan(tr) or np.isnan(te)) else None)
     preds.append({"番号": 1, "予想": "全部の買いの費用後 126 日の超過: 学習 +1〜+3%、検定 0〜+2%（A の割合が 85% 未満なら答え合わせしない）", "実際": f"学習 {fmt_pct(tr)}、検定 {fmt_pct(te)}、学習の A の割合 {A_share_train*100:.1f}%", "当たり": ok1, "別枠": False})
     c1 = cm("クラスター人数", "クラスター人数=1人", "test"); c3p = wavg([(cm("クラスター人数", f"クラスター人数={v}", "test"), cn("クラスター人数", f"クラスター人数={v}", "test")) for v in ["3人", "4人以上"]])
@@ -568,11 +575,11 @@ def main():
     L.append(f"- 全部の買い（絞らない・主要）の費用後 126 日の超過: 学習 {fmt_pct(tr)}、検定 {fmt_pct(te)}")
     L.append(f"- 予想の答え合わせ: 別枠を除く {judged} 個のうち外れ {misses} 個（4 個以上なら相場観を見直す）\n")
     L.append("## 1. 順位 10 選（学習の費用後 126 日の超過リターンの大きい順。1 軸の合格 → 2 軸の合格 → 参考。検定は答え合わせの○×）\n")
-    L.append("| 順位 | 区分 | 段 | 学習 n | 学習 平均 | 学習 中央値 | 学習 勝率 | 学習 下位10% | 学習 t | 差の t | 3 期間 | 年の件数 | 検定 n | 検定 平均 | 検定 中央値 | 検定 勝率 | 検定 t | 同符号 | 費用後＋ | t≥2 | 不安定 | A/B/C（検定） | B を −55% |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    L.append("| 順位 | 区分 | 段 | 学習 n | 学習 平均 | 学習 中央値 | 学習 勝率 | 学習 下位10% | 学習 t | 差の t | 3 期間 | 年の件数 | 検定 n | 検定 平均 | 検定 中央値 | 検定 勝率 | 検定 t | 同符号 | 費用後＋ | t≥2 | 不安定 | 株価が引けない割合（学習） | A/B/C（検定） | B を −55% |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for _, r in top.iterrows():
         L.append(f"| {r['順位']} | {r['区分']} | {r['cell']} | {r['n_train']} | {fmt_pct(r['mean_train'])} | {fmt_pct(r['median_train'])} | {fmt_pct(r['win_train'],0)} | {fmt_pct(r['p10_train'])} | {fmt_num(r['t_train'])} | {fmt_num(r['t_diff_train'])} | {r['subs_positive']}/3 | {fmt_num(r['events_per_year_train'],0)} | "
-                 f"{r['n_test']} | {fmt_pct(r['mean_test'])} | {fmt_pct(r['median_test'])} | {fmt_pct(r['win_test'],0)} | {fmt_num(r['t_test'])} | {mark(r['test_same_sign'])} | {mark(r['test_net_positive'])} | {mark(r['test_t_ok'])} | {('不安定: ' + r['unstable_detail']) if r['unstable'] else '安定'} | {r['A_test']}/{r['B_test']}/{r['C_test']} | {fmt_pct(r.get('mean_test_trunc_m55', np.nan))} |")
+                 f"{r['n_test']} | {fmt_pct(r['mean_test'])} | {fmt_pct(r['median_test'])} | {fmt_pct(r['win_test'],0)} | {fmt_num(r['t_test'])} | {mark(r['test_same_sign'])} | {mark(r['test_net_positive'])} | {mark(r['test_t_ok'])} | {('不安定: ' + r['unstable_detail']) if r['unstable'] else '安定'} | {fmt_pct(r['c_share_train'],0)} | {r['A_test']}/{r['B_test']}/{r['C_test']} | {fmt_pct(r.get('mean_test_trunc_m55', np.nan))} |")
     L.append("")
     L.append("読み方: 「平均」は、同じ売買代金の階級の平均を引き、往復の費用（売買代金で 0.3〜2.5%）も引いたあとの 126 営業日のリターン（イベント等重み）。「差の t」は残り全部との差。「3 期間」は学習を 3 つに切って全部プラスだった数。「不安定」は費用 ±50%・クラスターの窓 14→30 日・H 126→63 日・途切れ −55%・会社 1 件に間引き のどれかで学習か検定の平均が 0 以下になった印。")
     L.append("年率は出さない（信号が無い間の資金の空きを無視するため）。生徒が受け取る年率は 2.1 のカレンダータイムの表を見る。\n")
