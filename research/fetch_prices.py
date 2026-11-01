@@ -161,49 +161,56 @@ def stooq_one(sym):
     return ("ok", rec) if rec is not None else ("none", None)
 
 
-def fetch_shard(symbols, k, n, out_pkl, yf_pause=0.6, stooq_pause=1.2, stooq_cap=600):
+def fetch_shard(symbols, k, n, out_pkl, yf_pause=0.6, stooq_pause=1.2, stooq_cap=600, budget_min=130.0):
+    """分担の分を取る。100 銘柄ごとに途中保存し、時間の予算（分）を超えたら残りはあきらめて保存する（機械の時間切れで全部を失わないため）"""
     mine = [s for i, s in enumerate(symbols) if i % n == k]
     if k == 0 and "SPY" not in mine:
         mine = ["SPY"] + mine
-    print(f"分担 {k}/{n}: {len(mine):,} 銘柄", flush=True)
+    print(f"分担 {k}/{n}: {len(mine):,} 銘柄（時間の予算 {budget_min:.0f} 分）", flush=True)
+    os.makedirs(os.path.dirname(out_pkl) or ".", exist_ok=True)
     prices, market = {}, {}
-    t0 = time.time(); limited = 0; done = 0
+    def save(note=""):
+        with open(out_pkl, "wb") as f:
+            pickle.dump({"prices": prices, "market": market, "shard": [k, n], "mine": len(mine), "note": note}, f, protocol=pickle.HIGHEST_PROTOCOL)
+    t0 = time.time(); done = 0; limits = 0; stopped = ""
     for sym in mine:
+        if (time.time() - t0) / 60 > budget_min * 0.75:
+            stopped = f"時間の予算の 75% を使ったので Yahoo はここまで（{done}/{len(mine)}）"; print(stopped, flush=True); break
+        rec = None
         for attempt in range(4):
             try:
-                rec = yf_one(sym)
-                limited = 0
-                break
+                rec = yf_one(sym); break
             except RateLimited:
-                limited += 1
-                wait = 60 * (attempt + 1)
-                print(f"  Yahoo が止めた（{sym}）。{wait} 秒待つ", flush=True)
+                limits += 1
+                wait = 45 * (attempt + 1)
+                print(f"  Yahoo が止めた（{sym}、{limits} 回目）。{wait} 秒待つ", flush=True)
                 time.sleep(wait)
-                rec = None
         else:
-            print("  Yahoo が止め続けるので、この分担の Yahoo はここまで", flush=True)
-            break
+            stopped = f"Yahoo が止め続けるので Yahoo はここまで（{done}/{len(mine)}）"; print(stopped, flush=True); break
         if rec is not None:
             prices[sym] = rec; market[sym] = "yfinance stocks"
         done += 1
-        if done % 200 == 0:
-            print(f"  yfinance {done:,}/{len(mine):,} … 取れた {len(prices):,}（{(time.time()-t0)/60:.1f} 分）", flush=True)
+        if done % 100 == 0:
+            save("途中"); print(f"  yfinance {done:,}/{len(mine):,} … 取れた {len(prices):,}（{(time.time()-t0)/60:.1f} 分、止められた回数 {limits}）", flush=True)
         time.sleep(yf_pause)
+    save("Yahoo まで")
     missing = [s for s in mine if s not in prices]
-    print(f"Yahoo で取れた {len(prices):,} / {len(mine):,}。無い {len(missing):,} を stooq の 1 銘柄 CSV で引く（上限 {stooq_cap}）", flush=True)
+    print(f"Yahoo で取れた {len(prices):,} / {len(mine):,}（試した {done}）。無い {len(missing):,} を stooq の 1 銘柄 CSV で引く（上限 {stooq_cap}）", flush=True)
     got_s = 0; tried = 0
     for sym in missing[:stooq_cap]:
+        if (time.time() - t0) / 60 > budget_min:
+            print(f"  時間の予算を使ったので stooq はここまで（{tried} 件）", flush=True); break
         st, rec = stooq_one(sym)
         tried += 1
         if st == "limit":
             print(f"  stooq が止めた（{tried} 件目）。ここまで", flush=True); break
         if rec is not None:
             prices[sym] = rec; market[sym] = "stooq stocks (per-symbol)"; got_s += 1
+        if tried % 100 == 0:
+            save("stooq 途中")
         time.sleep(stooq_pause)
     print(f"stooq で補えた {got_s} / 試した {tried}", flush=True)
-    os.makedirs(os.path.dirname(out_pkl) or ".", exist_ok=True)
-    with open(out_pkl, "wb") as f:
-        pickle.dump({"prices": prices, "market": market, "shard": [k, n], "mine": len(mine)}, f, protocol=pickle.HIGHEST_PROTOCOL)
+    save(stopped or "全部")
     print(f"終了: {out_pkl} に {len(prices):,} 銘柄（{(time.time()-t0)/60:.1f} 分）", flush=True)
 
 
@@ -333,6 +340,7 @@ def main():
     ap.add_argument("--symbols", default="research/raw/symbols.txt")
     ap.add_argument("--shard", default=None, help="k/n。一覧の k 番目の分だけ取る")
     ap.add_argument("--shard-out", default=None, help="分担の結果の置き場（既定 research/raw/shards/prices_shard_k.pkl）")
+    ap.add_argument("--budget", type=float, default=130.0, help="分担 1 つの時間の予算（分）。超えたら残りはあきらめて保存する")
     ap.add_argument("--merge", default=None, help="分担の結果が入った場所。合わせて prices.pkl を作る")
     ap.add_argument("--bulk", action="store_true", help="stooq の一括を試す（今は取れない）")
     ap.add_argument("--zip", default=None)
@@ -343,7 +351,7 @@ def main():
         k, n = [int(x) for x in a.shard.split("/")]
         syms = [s.strip() for s in open(a.symbols) if s.strip()]
         out_pkl = a.shard_out or os.path.join(a.out, "shards", f"prices_shard_{k:02d}.pkl")
-        fetch_shard(syms, k, n, out_pkl); return
+        fetch_shard(syms, k, n, out_pkl, budget_min=a.budget); return
     if a.merge:
         merge(a.merge, a.out, a.checks, a.symbols); return
     if a.bulk:
