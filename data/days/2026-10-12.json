@@ -1,1 +1,1 @@
-{"date": "2026-10-12", "filings_seen": 0, "filings_parsed": 0, "accessions": [], "rows": [], "complete": false, "errors": ["INDEX"], "collector": "fetch_edgar-2.7", "fetched_at": "2026-11-01T17:36:13Z"}
+{"date": "2026-10-12", "filings_seen": 0, "filings_parsed": 0, "accessions": [], "rows": [], "complete": true, "errors": [], "collector": "fetch_edgar-2.8", "fetched_at": "2026-11-01T17:48:30Z", "index_missing": true}
