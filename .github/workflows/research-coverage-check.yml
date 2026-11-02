@@ -1,0 +1,42 @@
+name: SECインサイダー 研究 株価データの候補の確かめ（買う前）
+
+# 手で起こす。前の研究の回（run_id）のイベントの表を使い、候補の株価データの無料の銘柄一覧で「抜けを何割埋められるか」を数える。出すのは数だけ
+on:
+  workflow_dispatch:
+    inputs:
+      events_run_id:
+        description: "イベントの表（research-events-N）を作った回の run id"
+        default: "41364228530"
+      events_artifact:
+        description: "成果物の名前"
+        default: "research-events-6"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 道具を入れる
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.2" numpy pyarrow
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.events_artifact }}
+          path: research/raw
+          run-id: ${{ inputs.events_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: 数える
+        run: |
+          set -o pipefail
+          mkdir -p research/out
+          ls -la research/raw
+          python -W ignore research/coverage_check.py --events research/raw/events.parquet --out research/out/coverage_vendors.csv 2>&1 | tee research/out/log_coverage.txt
