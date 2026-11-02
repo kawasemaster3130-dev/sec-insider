@@ -1,0 +1,47 @@
+name: SECインサイダー 研究 v1 の見出しの直し（監査で見つかった 2 つ）
+
+# 手で起こす。v1 の 6 回目の成果物（イベントの表と銘柄の対応表）に、取り直し無しで直せる 2 つの直しを当てて、見出しの数字を数え直す。出すのは数だけ
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "v1 の回の run id"
+        default: "41364228530"
+      n:
+        description: "その回の番号（成果物の名前の末尾）"
+        default: "6"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 道具を入れる
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pandas>=2.2" numpy pyarrow
+      - uses: actions/download-artifact@v4
+        with:
+          name: research-events-${{ inputs.n }}
+          path: research/raw
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: prep-${{ inputs.n }}
+          path: research
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: 数え直す
+        run: |
+          set -o pipefail
+          ls -la research/raw | head -20
+          python -W ignore research/diag_v1.py --events research/raw/events.parquet --cik-ticker research/raw/cik_ticker.parquet 2>&1 | tee research_diag.txt
