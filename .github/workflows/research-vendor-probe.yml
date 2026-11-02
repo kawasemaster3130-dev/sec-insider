@@ -134,3 +134,31 @@ jobs:
           if shown == 0:
               print("日足と 1 分足の組が見本に無かった")
           EOF
+      - name: 銘柄の一覧の作り（名前が変わった会社・同じ記号の上場廃止が 2 社以上・Q 付き）
+        working-directory: probe
+        run: |
+          python3 - <<'EOF'
+          import zipfile, re, collections
+          z = zipfile.ZipFile("sample.zip")
+          doc = z.read("__readme_documentation.txt").decode("utf-8", "replace").splitlines()
+          rx = re.compile(r"^\s*([A-Z0-9][A-Z0-9.\-]*)\s*\((.*)\)\s*Start Date:\s*(\d{4}-\d{2}-\d{2})\s*$")
+          ent = [m.groups() for m in (rx.match(l) for l in doc) if m]
+          print("一覧の行:", len(ent))
+          suf = collections.Counter(re.sub(r"^[A-Z0-9.]+", "", t) for t, _, _ in ent)
+          print("記号の後ろの形（-DELISTED など）の数:", suf.most_common(12))
+          base = collections.defaultdict(list)
+          for t, n, sd in ent:
+              base[re.sub(r"-DELISTED.*$", "", t)].append((t, n, sd))
+          multi_del = {b: v for b, v in base.items() if sum(1 for x in v if "DELISTED" in x[0]) >= 2}
+          print("同じ記号で -DELISTED が 2 つ以上の記号の数:", len(multi_del), "見本:", list(multi_del.items())[:5])
+          both = [b for b, v in base.items() if any("DELISTED" in x[0] for x in v) and any("DELISTED" not in x[0] for x in v)]
+          print("今の銘柄と -DELISTED の両方がある記号の数:", len(both), "見本:", both[:15])
+          qq = [t for t, _, _ in ent if re.sub(r"-DELISTED.*$", "", t).endswith("Q") and len(re.sub(r"-DELISTED.*$", "", t)) >= 4]
+          print("末尾が Q の記号（4 文字以上）の数:", len(qq), "見本:", qq[:20])
+          look = ["META", "FB", "GOOG", "GOOGL", "BRK.A", "BRK.B", "LEH", "LEHMQ", "WM", "WAMU", "WAMUQ", "BBBY", "BBBYQ", "SHLD", "SHLDQ", "SIVB", "SIVBQ", "TWTR", "X", "C",
+                  "AABA", "YHOO", "ABBV", "ABT", "GE", "GEV", "GEHC", "KHC", "HNZ", "DWDP", "DD", "DOW", "CBS", "VIAC", "PARA", "FOXA", "TWX", "T", "AAPL", "MO", "NVDA", "TSLA"]
+          for b in look:
+              print(f"  {b}: {base.get(b, '無い')}")
+          early = sum(1 for t, n, sd in ent if sd <= "2000-01-04")
+          print("最初の日が 2000-01-04 以前の行:", early, "／ 名前が空の行:", sum(1 for t, n, sd in ent if not n.strip()))
+          EOF
