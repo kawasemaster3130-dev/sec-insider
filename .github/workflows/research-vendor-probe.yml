@@ -1,6 +1,8 @@
 name: SECインサイダー 研究 株価データの見本の形を見る（無料の見本）
 
-# 手で起こす。FirstRate Data が無料で出している見本（frd_stock_sample.zip）を落として、ファイルの名前と、日足のファイルの最初の数行だけを出す（取り込みの道具を、買う前に形に合わせて書くため）
+# 手で起こす。FirstRate Data が無料で出している見本（frd_stock_sample.zip。誰でも落とせる）を落として、
+# ファイルの名前・説明書（readme）・日足の最初と最後の数行と、「日足の始値・終値・出来高が、通常の取引時間（9:30〜16:00 米国東部）の物か、時間外を含む物か」を 1 分足と比べて出す。
+# 研究の結果は出さない（見本の形だけ）。取り込みの道具を、買う前に形に合わせて書くため
 on:
   workflow_dispatch: {}
 
@@ -12,50 +14,123 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: 見本を落として形を見る
+      - name: 見本を落とす
         run: |
           set -e
           mkdir -p probe && cd probe
           curl -sSL -A "Mozilla/5.0 (sec-insider research)" -o sample.zip https://frd001.s3.us-east-2.amazonaws.com/frd_stock_sample.zip
           ls -la sample.zip
+      - name: ファイルの名前と説明書
+        working-directory: probe
+        run: |
           python3 - <<'EOF'
           import zipfile, io
           z = zipfile.ZipFile("sample.zip")
           names = z.namelist()
           print("ファイルの数:", len(names))
-          for n in names[:80]:
-              info = z.getinfo(n)
-              print(f"{info.file_size:>12,}  {n}")
-          daily = [n for n in names if ("1day" in n.lower() or "daily" in n.lower() or "_1d" in n.lower()) and not n.endswith("/")]
-          print("日足らしいファイル:", daily[:20])
-          for n in (daily[:3] or [x for x in names if x.lower().endswith((".txt", ".csv"))][:3]):
-              raw = z.read(n)
-              if n.lower().endswith(".zip"):
-                  zz = zipfile.ZipFile(io.BytesIO(raw)); inner = zz.namelist()
-                  print(f"--- {n} の中: {len(inner)} 個。最初: {inner[:5]}")
-                  for m in inner[:2]:
-                      lines = zz.read(m).decode("utf-8", "replace").splitlines()
-                      print(f"--- {n}/{m}（{len(lines)} 行）"); print("\n".join(lines[:4])); print("..."); print("\n".join(lines[-2:]))
-              else:
-                  lines = raw.decode("utf-8", "replace").splitlines()
-                  print(f"--- {n}（{len(lines)} 行）"); print("\n".join(lines[:4])); print("..."); print("\n".join(lines[-2:]))
+          for n in names:
+              print(f"{z.getinfo(n).file_size:>12,}  {n}")
+          docs = [n for n in names if n.lower().endswith((".txt", ".md", ".pdf")) and ("readme" in n.lower() or "documentation" in n.lower())]
+          for d in docs:
+              if d.lower().endswith(".pdf"):
+                  print("PDF の説明書:", d); continue
+              text = z.read(d).decode("utf-8", "replace")
+              lines = text.splitlines()
+              print(f"===== {d}（{len(lines)} 行）。銘柄の一覧らしい行（'XXX (名前) Start Date' の形）は数だけ出す =====")
+              import re
+              tick = re.compile(r"^\s*[A-Z0-9][A-Z0-9.\-]*\s*\(.*\)\s*(Start Date|First Date|$)")
+              n_tick = 0
+              for l in lines:
+                  if tick.match(l) and len(l) < 300:
+                      n_tick += 1
+                      if n_tick <= 5 or "DELISTED" in l and n_tick % 200 == 0:
+                          print("  [銘柄の行の見本]", l)
+                      continue
+                  print(l)
+              print(f"----- 銘柄の行の数: {n_tick}。うち -DELISTED を含む: {sum(1 for l in lines if 'DELISTED' in l)}")
+              dl = [l for l in lines if "DELISTED" in l][:12]
+              print("----- -DELISTED を含む行の見本 -----"); print("\n".join(dl))
           EOF
-          python3 - <<'EOF2'
-          import zipfile, re
+      - name: 日足と 1 分足の形と、日足の時間の範囲
+        working-directory: probe
+        run: |
+          python3 - <<'EOF'
+          import zipfile, io, re, collections
           z = zipfile.ZipFile("sample.zip")
-          doc = z.read("__readme_documentation.txt").decode("utf-8", "replace")
-          lines = doc.splitlines()
-          print("readme の行数:", len(lines))
-          print("----- 最初の 120 行 -----")
-          print("\n".join(lines[:120]))
-          keys = re.compile(r"delist|unadjust|adjusted|split|dividend|naming|file name|filename|ticker change|renam|timezone|time zone|eastern|format|column", re.I)
-          hits = [l for l in lines if keys.search(l) and len(l) < 400]
-          print("----- 言葉で拾った行（最初の 80）-----")
-          print("\n".join(hits[:80]))
-          dl = [l for l in lines if "DELISTED" in l]
-          print("----- DELISTED を含む行の数:", len(dl), "。最初の 15 と最後の 5 -----")
-          print("\n".join(dl[:15])); print("..."); print("\n".join(dl[-5:]))
-          tick = [l for l in lines if re.match(r"^[A-Z0-9][A-Z0-9.\-]*\s*\(", l)]
-          print("----- 銘柄の行らしい物の数:", len(tick), "。見本 10 -----")
-          print("\n".join(tick[:10]))
-          EOF2
+          def read_any(name, data=None):
+              """zip の中の zip も開く。{名前: 行のリスト}"""
+              out = {}
+              raw = data if data is not None else z.read(name)
+              if name.lower().endswith(".zip"):
+                  zz = zipfile.ZipFile(io.BytesIO(raw))
+                  for m in zz.namelist():
+                      if not m.endswith("/"):
+                          out.update(read_any(name + "/" + m, zz.read(m)))
+              elif name.lower().endswith((".txt", ".csv")):
+                  out[name] = raw.decode("utf-8", "replace").splitlines()
+              return out
+          files = {}
+          for n in z.namelist():
+              if n.endswith("/") or "readme" in n.lower() or "documentation" in n.lower():
+                  continue
+              files.update(read_any(n))
+          print("中身のファイルの数:", len(files))
+          for k in sorted(files)[:60]:
+              v = files[k]
+              print(f"--- {k}（{len(v)} 行）"); print("\n".join(v[:3])); print("..."); print("\n".join(v[-2:]))
+          # 日足と 1 分足の組を探して、日足の始値・終値・出来高を 1 分足から作った値と比べる
+          def kind(k):
+              s = k.lower()
+              for tag in ["1day", "1min", "5min", "30min", "1hour"]:
+                  if tag in s:
+                      return tag
+              return "?"
+          def adj(k):
+              s = k.lower()
+              for tag in ["unadjusted", "adjsplitdiv", "adjsplit", "adj"]:
+                  if tag in s:
+                      return tag
+              return "?"
+          def ticker_of(k):
+              base = k.split("/")[-1]
+              return re.split(r"[_.]", base)[0].upper()
+          groups = collections.defaultdict(dict)
+          for k in files:
+              groups[(ticker_of(k), adj(k))][kind(k)] = k
+          print("組（銘柄, 調整）ごとの足の種類:", {f"{a}|{b}": sorted(v) for (a, b), v in list(groups.items())[:40]})
+          def parse(lines):
+              rows = []
+              for l in lines:
+                  p = l.split(",")
+                  if len(p) < 6 or not re.match(r"^\d{4}-\d{2}-\d{2}", p[0]):
+                      continue
+                  try:
+                      rows.append((p[0].strip(), float(p[1]), float(p[2]), float(p[3]), float(p[4]), float(p[5])))
+                  except ValueError:
+                      continue
+              return rows
+          shown = 0
+          for (tk, ad), kinds in groups.items():
+              if "1day" not in kinds or "1min" not in kinds or shown >= 4:
+                  continue
+              d = {r[0][:10]: r for r in parse(files[kinds["1day"]])}
+              m = collections.defaultdict(list)
+              for r in parse(files[kinds["1min"]]):
+                  m[r[0][:10]].append(r)
+              days = sorted(set(d) & set(m))[-15:]
+              if not days:
+                  continue
+              shown += 1
+              print(f"===== {tk}（{ad}）: 日足 vs 1 分足（最後の 15 日）。時刻の範囲・9:30 の始値・最初の足の始値・16:00 前の終値・最後の足の終値・出来高（通常の時間／全部）")
+              for day in days:
+                  bars = sorted(m[day])
+                  t = [b[0][11:16] for b in bars]
+                  rth = [b for b in bars if "09:30" <= b[0][11:16] <= "15:59"]
+                  o930 = rth[0][1] if rth else float("nan")
+                  c1559 = rth[-1][4] if rth else float("nan")
+                  v_rth = sum(b[5] for b in rth); v_all = sum(b[5] for b in bars)
+                  D = d[day]
+                  print(f"{day} 足 {t[0]}〜{t[-1]}（{len(bars)} 本）| 日足 O {D[1]:.4f} C {D[4]:.4f} V {D[5]:.0f} | 9:30 の O {o930:.4f}・最初の O {bars[0][1]:.4f} | 15:59 の C {c1559:.4f}・最後の C {bars[-1][4]:.4f} | V 通常 {v_rth:.0f}・全部 {v_all:.0f}")
+          if shown == 0:
+              print("日足と 1 分足の組が見本に無かった")
+          EOF
