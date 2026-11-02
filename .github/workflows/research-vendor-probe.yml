@@ -40,3 +40,22 @@ jobs:
                   lines = raw.decode("utf-8", "replace").splitlines()
                   print(f"--- {n}（{len(lines)} 行）"); print("\n".join(lines[:4])); print("..."); print("\n".join(lines[-2:]))
           EOF
+          python3 - <<'EOF2'
+          import zipfile, re
+          z = zipfile.ZipFile("sample.zip")
+          doc = z.read("__readme_documentation.txt").decode("utf-8", "replace")
+          lines = doc.splitlines()
+          print("readme の行数:", len(lines))
+          print("----- 最初の 120 行 -----")
+          print("\n".join(lines[:120]))
+          keys = re.compile(r"delist|unadjust|adjusted|split|dividend|naming|file name|filename|ticker change|renam|timezone|time zone|eastern|format|column", re.I)
+          hits = [l for l in lines if keys.search(l) and len(l) < 400]
+          print("----- 言葉で拾った行（最初の 80）-----")
+          print("\n".join(hits[:80]))
+          dl = [l for l in lines if "DELISTED" in l]
+          print("----- DELISTED を含む行の数:", len(dl), "。最初の 15 と最後の 5 -----")
+          print("\n".join(dl[:15])); print("..."); print("\n".join(dl[-5:]))
+          tick = [l for l in lines if re.match(r"^[A-Z0-9][A-Z0-9.\-]*\s*\(", l)]
+          print("----- 銘柄の行らしい物の数:", len(tick), "。見本 10 -----")
+          print("\n".join(tick[:10]))
+          EOF2
