@@ -1,0 +1,42 @@
+name: SECインサイダー 研究 株価データの見本の形を見る（無料の見本）
+
+# 手で起こす。FirstRate Data が無料で出している見本（frd_stock_sample.zip）を落として、ファイルの名前と、日足のファイルの最初の数行だけを出す（取り込みの道具を、買う前に形に合わせて書くため）
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 見本を落として形を見る
+        run: |
+          set -e
+          mkdir -p probe && cd probe
+          curl -sSL -A "Mozilla/5.0 (sec-insider research)" -o sample.zip https://frd001.s3.us-east-2.amazonaws.com/frd_stock_sample.zip
+          ls -la sample.zip
+          python3 - <<'EOF'
+          import zipfile, io
+          z = zipfile.ZipFile("sample.zip")
+          names = z.namelist()
+          print("ファイルの数:", len(names))
+          for n in names[:80]:
+              info = z.getinfo(n)
+              print(f"{info.file_size:>12,}  {n}")
+          daily = [n for n in names if ("1day" in n.lower() or "daily" in n.lower() or "_1d" in n.lower()) and not n.endswith("/")]
+          print("日足らしいファイル:", daily[:20])
+          for n in (daily[:3] or [x for x in names if x.lower().endswith((".txt", ".csv"))][:3]):
+              raw = z.read(n)
+              if n.lower().endswith(".zip"):
+                  zz = zipfile.ZipFile(io.BytesIO(raw)); inner = zz.namelist()
+                  print(f"--- {n} の中: {len(inner)} 個。最初: {inner[:5]}")
+                  for m in inner[:2]:
+                      lines = zz.read(m).decode("utf-8", "replace").splitlines()
+                      print(f"--- {n}/{m}（{len(lines)} 行）"); print("\n".join(lines[:4])); print("..."); print("\n".join(lines[-2:]))
+              else:
+                  lines = raw.decode("utf-8", "replace").splitlines()
+                  print(f"--- {n}（{len(lines)} 行）"); print("\n".join(lines[:4])); print("..."); print("\n".join(lines[-2:]))
+          EOF
