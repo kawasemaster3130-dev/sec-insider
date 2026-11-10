@@ -83,6 +83,21 @@
   "price": 2.93,
   "symbol": "ANIX"
  },
+ "ANVS": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "2020-01-29",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 38466636.0,
+  "name": "Annovis Bio, Inc.",
+  "price": 0.9013,
+  "symbol": "ANVS"
+ },
  "AOMR": {
   "country": "US",
   "currency": "USD",
@@ -232,6 +247,21 @@
   "name": "Bluerock Private Real Estate Fund",
   "price": 12.56,
   "symbol": "BPRE"
+ },
+ "BXMT": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "1980-12-29",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1855745840.0,
+  "name": "Blackstone Mortgage Trust, Inc.",
+  "price": 11.18,
+  "symbol": "BXMT"
  },
  "CHCO": {
   "country": "US",
@@ -392,6 +422,21 @@
   "price": 56.59,
   "symbol": "CVNA"
  },
+ "CVS": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "1973-02-21",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 109032192500.0,
+  "name": "CVS Health Corp.",
+  "price": 85.25,
+  "symbol": "CVS"
+ },
  "CXM": {
   "country": "US",
   "currency": "USD",
@@ -518,6 +563,21 @@
   "price": 3.07,
   "symbol": "EP"
  },
+ "ETRA": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-10",
+  "ipo_date": "2026-09-18",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 174366750.0,
+  "name": "Electra Therapeutics Inc.",
+  "price": 8.22,
+  "symbol": "ETRA"
+ },
  "FBK": {
   "country": "US",
   "currency": "USD",
@@ -531,6 +591,21 @@
   "name": "FB Financial Corporation",
   "price": 53.67,
   "symbol": "FBK"
+ },
+ "FBRT": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "2021-10-19",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 492563258.0,
+  "name": "Franklin BSP Realty Trust, Inc.",
+  "price": 6.4,
+  "symbol": "FBRT"
  },
  "FEAM": {
   "country": "US",
@@ -657,6 +732,21 @@
   "name": "Gogoro Inc.",
   "price": 2.92,
   "symbol": "GGR"
+ },
+ "GLXY": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-10",
+  "ipo_date": "2025-05-16",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 4812779081.0,
+  "name": "Galaxy Digital",
+  "price": 14.51,
+  "symbol": "GLXY"
  },
  "GME": {
   "country": "US",
@@ -915,6 +1005,36 @@
   "price": 12.69,
   "symbol": "KBDC"
  },
+ "KMI": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "2011-02-11",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 68101254551.0,
+  "name": "Kinder Morgan, Inc.",
+  "price": 30.57,
+  "symbol": "KMI"
+ },
+ "KMT": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "1943-01-01",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1847110200.0,
+  "name": "Kennametal Inc.",
+  "price": 24.18,
+  "symbol": "KMT"
+ },
  "KOD": {
   "country": "US",
   "currency": "USD",
@@ -942,6 +1062,26 @@
   "name": "Korro Bio, Inc.",
   "price": 12.02,
   "symbol": "KRRO"
+ },
+ "KYN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "2004-09-28",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": true,
+  "market_cap": 2273053951.0,
+  "name": "Kayne Anderson Energy Infrastructure Fund Inc.",
+  "price": 13.44,
+  "symbol": "KYN"
+ },
+ "LBTY": {
+  "fetched": "2026-11-10",
+  "not_found": true,
+  "symbol": "LBTY"
  },
  "LEN": {
   "country": "US",
@@ -985,6 +1125,21 @@
   "price": 7.76,
   "symbol": "LILA"
  },
+ "LKQ": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-10",
+  "ipo_date": "2003-10-06",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 5151444752.0,
+  "name": "LKQ Corporation",
+  "price": 20.41,
+  "symbol": "LKQ"
+ },
  "LNBIX": {
   "fetched": "2026-10-27",
   "not_found": true,
@@ -1004,6 +1159,36 @@
   "price": 23.0,
   "symbol": "LWAY"
  },
+ "LYEL": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-10",
+  "ipo_date": "2021-06-17",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 377868642.0,
+  "name": "Lyell Immunopharma, Inc.",
+  "price": 15.42,
+  "symbol": "LYEL"
+ },
+ "MDGL": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-10",
+  "ipo_date": "2007-02-06",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 9999223439.0,
+  "name": "Madrigal Pharmaceuticals, Inc.",
+  "price": 432.79,
+  "symbol": "MDGL"
+ },
  "MNSO": {
   "country": "CN",
   "currency": "USD",
@@ -1017,6 +1202,21 @@
   "name": "MINISO Group Holding Limited",
   "price": 9.98,
   "symbol": "MNSO"
+ },
+ "MTDR": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "2012-02-02",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 6183987380.0,
+  "name": "Matador Resources Company",
+  "price": 49.97,
+  "symbol": "MTDR"
  },
  "MXF": {
   "country": "MX",
@@ -1481,6 +1681,21 @@
   "not_found": true,
   "symbol": "STWI"
  },
+ "SYNX": {
+  "country": "IL",
+  "currency": "USD",
+  "exchange": "AMEX",
+  "exchange_full": "New York Stock Exchange Arca",
+  "fetched": "2026-11-10",
+  "ipo_date": "2024-01-12",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 5986219.0,
+  "name": "Silynxcom Ltd.",
+  "price": 0.9023,
+  "symbol": "SYNX"
+ },
  "TDIC": {
   "country": "HK",
   "currency": "USD",
@@ -1537,6 +1752,21 @@
   "price": 1.38,
   "symbol": "TKLF"
  },
+ "TRAD": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "2026-04-20",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 148126440.0,
+  "name": "APEX Tech Acquisition Inc.",
+  "price": 10.12,
+  "symbol": "TRAD"
+ },
  "TRCK": {
   "country": "US",
   "currency": "USD",
@@ -1551,6 +1781,21 @@
   "price": 0.46,
   "symbol": "TRCK"
  },
+ "TRNS": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Market",
+  "fetched": "2026-11-10",
+  "ipo_date": "1977-12-05",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1025460784.0,
+  "name": "Transcat, Inc.",
+  "price": 109.56,
+  "symbol": "TRNS"
+ },
  "TRXB": {
   "country": "US",
   "currency": "USD",
@@ -1564,6 +1809,36 @@
   "name": "TRex Bio Inc.",
   "price": 13.87,
   "symbol": "TRXB"
+ },
+ "TTMI": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-10",
+  "ipo_date": "2000-09-25",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 7937937922.0,
+  "name": "TTM Technologies, Inc.",
+  "price": 75.33,
+  "symbol": "TTMI"
+ },
+ "UPBD": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-10",
+  "ipo_date": "1995-01-25",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1438902689.0,
+  "name": "Upbound Group, Inc.",
+  "price": 24.68,
+  "symbol": "UPBD"
  },
  "UUU": {
   "country": "US",
@@ -1625,6 +1900,21 @@
   "name": "Exagen Inc.",
   "price": 7.47,
   "symbol": "XGN"
+ },
+ "YPF": {
+  "country": "AR",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-10",
+  "ipo_date": "1993-06-29",
+  "is_adr": true,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 14932165440.0,
+  "name": "YPF Sociedad Anónima",
+  "price": 38.09,
+  "symbol": "YPF"
  },
  "ZONE": {
   "country": "US",
