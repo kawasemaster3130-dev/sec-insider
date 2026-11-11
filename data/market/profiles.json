@@ -27,6 +27,21 @@
   "price": 8.3,
   "symbol": "ACOG"
  },
+ "ADM": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-11",
+  "ipo_date": "1980-03-17",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 32981200352.0,
+  "name": "Archer-Daniels-Midland Company",
+  "price": 69.3,
+  "symbol": "ADM"
+ },
  "ADRX": {
   "country": "US",
   "currency": "USD",
@@ -40,6 +55,21 @@
   "name": "ADARx Pharmaceuticals, Inc.",
   "price": 17.81,
   "symbol": "ADRX"
+ },
+ "ADTN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-11",
+  "ipo_date": "1994-08-11",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 359332974.0,
+  "name": "ADTRAN Holdings Inc.",
+  "price": 4.41,
+  "symbol": "ADTN"
  },
  "AFCG": {
   "country": "US",
@@ -68,6 +98,21 @@
   "name": "AgomAb Therapeutics N.V. American Depositary Shares",
   "price": 8.57,
   "symbol": "AGMB"
+ },
+ "AN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-11",
+  "ipo_date": "1990-05-11",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 5889460104.0,
+  "name": "AutoNation, Inc.",
+  "price": 184.14,
+  "symbol": "AN"
  },
  "ANIX": {
   "country": "US",
@@ -305,6 +350,21 @@
   "price": 3.13,
   "symbol": "CLPR"
  },
+ "CMCO": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-11",
+  "ipo_date": "1996-02-23",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 587787862.0,
+  "name": "Columbus McKinnon Corporation",
+  "price": 20.32,
+  "symbol": "CMCO"
+ },
  "CNXU": {
   "country": "US",
   "currency": "USD",
@@ -450,6 +510,36 @@
   "name": "Sprinklr, Inc.",
   "price": 6.71,
   "symbol": "CXM"
+ },
+ "DGICA": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-11",
+  "ipo_date": "2003-07-03",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 709849053.0,
+  "name": "Donegal Group Inc.",
+  "price": 18.97,
+  "symbol": "DGICA"
+ },
+ "DKNG": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-11",
+  "ipo_date": "2019-07-25",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 9611349440.0,
+  "name": "DraftKings Inc.",
+  "price": 19.36,
+  "symbol": "DKNG"
  },
  "DKS": {
   "country": "US",
@@ -649,6 +739,21 @@
   "price": 0.6118,
   "symbol": "FLNA"
  },
+ "FLOC": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-11",
+  "ipo_date": "2025-01-16",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1924103164.0,
+  "name": "Flowco Holdings Inc.",
+  "price": 20.67,
+  "symbol": "FLOC"
+ },
  "FLSC": {
   "country": "US",
   "currency": "USD",
@@ -718,6 +823,21 @@
   "name": "The New Germany Fund, Inc.",
   "price": 10.19,
   "symbol": "GF"
+ },
+ "GFS": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-11",
+  "ipo_date": "2021-10-28",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 22290269682.0,
+  "name": "GLOBALFOUNDRIES Inc.",
+  "price": 40.62,
+  "symbol": "GFS"
  },
  "GGR": {
   "country": "TW",
@@ -1083,6 +1203,21 @@
   "not_found": true,
   "symbol": "LBTY"
  },
+ "LCRDX": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-11",
+  "ipo_date": "2020-01-02",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": true,
+  "market_cap": 2748631572.0,
+  "name": "Lord Abbett Credit Opportunities Fund",
+  "price": 7.68,
+  "symbol": "LCRDX"
+ },
  "LEN": {
   "country": "US",
   "currency": "USD",
@@ -1144,6 +1279,36 @@
   "fetched": "2026-10-27",
   "not_found": true,
   "symbol": "LNBIX"
+ },
+ "LRN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-11",
+  "ipo_date": "2007-12-13",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 3230192887.0,
+  "name": "Stride, Inc.",
+  "price": 76.82,
+  "symbol": "LRN"
+ },
+ "LUMN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-11",
+  "ipo_date": "1980-03-17",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 4856211244.0,
+  "name": "Lumen Technologies, Inc.",
+  "price": 4.71,
+  "symbol": "LUMN"
  },
  "LWAY": {
   "country": "US",
@@ -1232,6 +1397,51 @@
   "price": 20.24,
   "symbol": "MXF"
  },
+ "NATR": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Capital Market",
+  "fetched": "2026-11-11",
+  "ipo_date": "2009-06-25",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 189403784.0,
+  "name": "Nature's Sunshine Products, Inc.",
+  "price": 10.93,
+  "symbol": "NATR"
+ },
+ "NFRX": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Market",
+  "fetched": "2026-11-11",
+  "ipo_date": "2026-01-30",
+  "is_adr": false,
+  "is_etf": true,
+  "is_fund": false,
+  "market_cap": 21941772.0,
+  "name": "Harrison Street Infrastructure Active ETF",
+  "price": 26.5967,
+  "symbol": "NFRX"
+ },
+ "NLY": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-11",
+  "ipo_date": "1997-10-08",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 14748794836.0,
+  "name": "Annaly Capital Management, Inc.",
+  "price": 18.72,
+  "symbol": "NLY"
+ },
  "NUAI": {
   "country": "US",
   "currency": "USD",
@@ -1301,6 +1511,21 @@
   "name": "Nayax Ltd.",
   "price": 50.41,
   "symbol": "NYAX"
+ },
+ "OBIO": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Market",
+  "fetched": "2026-11-11",
+  "ipo_date": "2020-08-04",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 344401919.0,
+  "name": "Orchestra BioMed Holdings, Inc.",
+  "price": 5.73,
+  "symbol": "OBIO"
  },
  "OM": {
   "country": "US",
@@ -1545,6 +1770,21 @@
   "price": 2.82,
   "symbol": "RENT"
  },
+ "ROK": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-11",
+  "ipo_date": "1981-12-31",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 44200239611.0,
+  "name": "Rockwell Automation, Inc.",
+  "price": 397.22,
+  "symbol": "ROK"
+ },
  "RTSN": {
   "country": "US",
   "currency": "USD",
@@ -1647,6 +1887,21 @@
   "name": "SenesTech, Inc.",
   "price": 0.8477,
   "symbol": "SNES"
+ },
+ "SOPH": {
+  "country": "CH",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-11",
+  "ipo_date": "2021-07-23",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 669104508.0,
+  "name": "SOPHiA GENETICS S.A.",
+  "price": 7.86,
+  "symbol": "SOPH"
  },
  "SPG": {
   "country": "US",
@@ -1810,6 +2065,21 @@
   "price": 13.87,
   "symbol": "TRXB"
  },
+ "TSM": {
+  "country": "TW",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-11",
+  "ipo_date": "1997-10-09",
+  "is_adr": true,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 2056335590400.0,
+  "name": "Taiwan Semiconductor Manufacturing Company Limited",
+  "price": 396.48,
+  "symbol": "TSM"
+ },
  "TTMI": {
   "country": "US",
   "currency": "USD",
@@ -1824,6 +2094,21 @@
   "name": "TTM Technologies, Inc.",
   "price": 75.33,
   "symbol": "TTMI"
+ },
+ "UFCS": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-11",
+  "ipo_date": "1980-03-18",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1324785690.0,
+  "name": "United Fire Group, Inc.",
+  "price": 51.51,
+  "symbol": "UFCS"
  },
  "UPBD": {
   "country": "US",
@@ -1872,6 +2157,21 @@
   "fetched": "2026-10-27",
   "not_found": true,
   "symbol": "VDTA"
+ },
+ "WCC": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-11",
+  "ipo_date": "1999-05-12",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 15413734211.0,
+  "name": "WESCO International, Inc.",
+  "price": 316.7,
+  "symbol": "WCC"
  },
  "XENE": {
   "country": "CA",
