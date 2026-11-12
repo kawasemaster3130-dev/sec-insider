@@ -171,6 +171,21 @@
   "price": 17.83,
   "symbol": "APLD"
  },
+ "ARLO": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2018-08-03",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1321558387.0,
+  "name": "Arlo Technologies, Inc.",
+  "price": 12.29,
+  "symbol": "ARLO"
+ },
  "ATCH": {
   "country": "US",
   "currency": "USD",
@@ -184,6 +199,21 @@
   "name": "AtlasClear Holdings, Inc.",
   "price": 0.1569,
   "symbol": "ATCH"
+ },
+ "ATEC": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-12",
+  "ipo_date": "2006-06-01",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1140277773.0,
+  "name": "Alphatec Holdings, Inc.",
+  "price": 7.35,
+  "symbol": "ATEC"
  },
  "AVO": {
   "country": "US",
@@ -265,6 +295,21 @@
   "price": 2.41,
   "symbol": "BOLD"
  },
+ "BOLT": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-12",
+  "ipo_date": "2021-02-05",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 12058920.0,
+  "name": "Bolt Biotherapeutics, Inc.",
+  "price": 6.26,
+  "symbol": "BOLT"
+ },
  "BORR": {
   "country": "BM",
   "currency": "USD",
@@ -292,6 +337,21 @@
   "name": "Bluerock Private Real Estate Fund",
   "price": 12.56,
   "symbol": "BPRE"
+ },
+ "BSM": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2015-04-30",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 2975808048.0,
+  "name": "Black Stone Minerals, L.P.",
+  "price": 13.98,
+  "symbol": "BSM"
  },
  "BXMT": {
   "country": "US",
@@ -364,6 +424,21 @@
   "name": "Columbus McKinnon Corporation",
   "price": 20.32,
   "symbol": "CMCO"
+ },
+ "CNXN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-12",
+  "ipo_date": "1998-03-03",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 2106937255.0,
+  "name": "PC Connection, Inc.",
+  "price": 83.45,
+  "symbol": "CNXN"
  },
  "CNXU": {
   "country": "US",
@@ -439,6 +514,21 @@
   "name": "Cornerstone Total Return Fund, Inc.",
   "price": 5.59,
   "symbol": "CRF"
+ },
+ "CRH": {
+  "country": "IE",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "1989-07-13",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 64035116808.0,
+  "name": "CRH plc",
+  "price": 96.26,
+  "symbol": "CRH"
  },
  "CTNT": {
   "country": "US",
@@ -611,6 +701,21 @@
   "price": 5.43,
   "symbol": "DSM"
  },
+ "DTI": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Capital Market",
+  "fetched": "2026-11-12",
+  "ipo_date": "2021-12-29",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 56804379.0,
+  "name": "Drilling Tools International Corp.",
+  "price": 1.61,
+  "symbol": "DTI"
+ },
  "DX": {
   "country": "US",
   "currency": "USD",
@@ -638,6 +743,21 @@
   "name": "Ellsworth Growth and Income Fund Ltd.",
   "price": 11.47,
   "symbol": "ECF"
+ },
+ "EMN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "1993-12-14",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 7604065554.0,
+  "name": "Eastman Chemical Company",
+  "price": 66.51,
+  "symbol": "EMN"
  },
  "EP": {
   "country": "US",
@@ -781,6 +901,21 @@
   "name": "H.B. Fuller Company",
   "price": 49.13,
   "symbol": "FUL"
+ },
+ "FUN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "1987-04-23",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1135641000.0,
+  "name": "Six Flags Entertainment Corporation",
+  "price": 11.1,
+  "symbol": "FUN"
  },
  "FUND": {
   "country": "CA",
@@ -1383,6 +1518,21 @@
   "price": 49.97,
   "symbol": "MTDR"
  },
+ "MX": {
+  "country": "KR",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2011-03-11",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 112631487.0,
+  "name": "MagnaChip Semiconductor",
+  "price": 2.96,
+  "symbol": "MX"
+ },
  "MXF": {
   "country": "MX",
   "currency": "USD",
@@ -1456,6 +1606,21 @@
   "price": 2.97,
   "symbol": "NUAI"
  },
+ "NVT": {
+  "country": "GB",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2018-04-24",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 18860109583.0,
+  "name": "nVent Electric plc",
+  "price": 116.71,
+  "symbol": "NVT"
+ },
  "NXG": {
   "country": "US",
   "currency": "USD",
@@ -1526,6 +1691,21 @@
   "name": "Orchestra BioMed Holdings, Inc.",
   "price": 5.73,
   "symbol": "OBIO"
+ },
+ "OBK": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2018-05-08",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1598939951.0,
+  "name": "Origin Bancorp, Inc.",
+  "price": 51.83,
+  "symbol": "OBK"
  },
  "OM": {
   "country": "US",
@@ -1699,6 +1879,21 @@
   "name": "Prothena Corporation plc",
   "price": 8.4,
   "symbol": "PRTA"
+ },
+ "PSEC": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-12",
+  "ipo_date": "2004-07-27",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 835483500.0,
+  "name": "Prospect Capital Corporation",
+  "price": 1.5,
+  "symbol": "PSEC"
  },
  "PSUS": {
   "country": "US",
@@ -1874,6 +2069,21 @@
   "price": 1.23,
   "symbol": "SLBT"
  },
+ "SLQT": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2020-05-21",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 90977094.0,
+  "name": "SelectQuote, Inc.",
+  "price": 0.507,
+  "symbol": "SLQT"
+ },
  "SNES": {
   "country": "US",
   "currency": "USD",
@@ -1917,6 +2127,21 @@
   "price": 212.69,
   "symbol": "SPG"
  },
+ "SPXC": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "1980-03-17",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 7708693720.0,
+  "name": "SPX Technologies, Inc.",
+  "price": 153.86,
+  "symbol": "SPXC"
+ },
  "STC": {
   "country": "US",
   "currency": "USD",
@@ -1930,6 +2155,36 @@
   "name": "Stewart Information Services Corporation",
   "price": 42.96,
   "symbol": "STC"
+ },
+ "STLN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-12",
+  "ipo_date": "2026-08-04",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 428362200.0,
+  "name": "Starling Oncology, Inc.",
+  "price": 4.2,
+  "symbol": "STLN"
+ },
+ "STVN": {
+  "country": "IT",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2021-07-16",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 3799219800.0,
+  "name": "Stevanato Group S.p.A.",
+  "price": 13.91,
+  "symbol": "STVN"
  },
  "STWI": {
   "fetched": "2026-10-27",
@@ -2095,6 +2350,21 @@
   "price": 75.33,
   "symbol": "TTMI"
  },
+ "TXO": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2023-01-27",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 772922914.0,
+  "name": "TXO Partners, L.P.",
+  "price": 13.94,
+  "symbol": "TXO"
+ },
  "UFCS": {
   "country": "US",
   "currency": "USD",
@@ -2172,6 +2442,36 @@
   "name": "WESCO International, Inc.",
   "price": 316.7,
   "symbol": "WCC"
+ },
+ "WD": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-12",
+  "ipo_date": "2010-12-15",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1362020960.0,
+  "name": "Walker & Dunlop, Inc.",
+  "price": 39.44,
+  "symbol": "WD"
+ },
+ "WW": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-12",
+  "ipo_date": "2001-11-15",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 130483818.0,
+  "name": "WW International, Inc.",
+  "price": 13.05,
+  "symbol": "WW"
  },
  "XENE": {
   "country": "CA",
