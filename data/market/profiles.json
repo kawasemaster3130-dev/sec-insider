@@ -114,6 +114,21 @@
   "price": 184.14,
   "symbol": "AN"
  },
+ "ANGX": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-19",
+  "ipo_date": "2025-09-11",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 833187115.0,
+  "name": "Angel Studios, Inc.",
+  "price": 4.24,
+  "symbol": "ANGX"
+ },
  "ANIX": {
   "country": "US",
   "currency": "USD",
@@ -353,6 +368,21 @@
   "price": 13.98,
   "symbol": "BSM"
  },
+ "BW": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-19",
+  "ipo_date": "2015-06-16",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 628326729.0,
+  "name": "Babcock & Wilcox Enterprises, Inc.",
+  "price": 4.32,
+  "symbol": "BW"
+ },
  "BXMT": {
   "country": "US",
   "currency": "USD",
@@ -409,6 +439,21 @@
   "name": "Clipper Realty Inc.",
   "price": 3.13,
   "symbol": "CLPR"
+ },
+ "CLRO": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Capital Market",
+  "fetched": "2026-11-19",
+  "ipo_date": "1989-03-03",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 18460343.0,
+  "name": "ClearOne, Inc.",
+  "price": 6.9,
+  "symbol": "CLRO"
  },
  "CMCO": {
   "country": "US",
@@ -586,6 +631,21 @@
   "name": "CVS Health Corp.",
   "price": 85.25,
   "symbol": "CVS"
+ },
+ "CVV": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Capital Market",
+  "fetched": "2026-11-19",
+  "ipo_date": "1999-03-01",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 31349926.0,
+  "name": "CVD Equipment Corporation",
+  "price": 4.51,
+  "symbol": "CVV"
  },
  "CXM": {
   "country": "US",
@@ -1176,6 +1236,11 @@
   "price": 20.95,
   "symbol": "HRL"
  },
+ "HRNG": {
+  "fetched": "2026-11-19",
+  "not_found": true,
+  "symbol": "HRNG"
+ },
  "IAM": {
   "country": "US",
   "currency": "USD",
@@ -1231,6 +1296,21 @@
   "name": "Inhibrx Biosciences Inc.",
   "price": 88.61,
   "symbol": "INBX"
+ },
+ "ITG": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-19",
+  "ipo_date": "2026-07-01",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 745566899.0,
+  "name": "ITG Inc.",
+  "price": 6.15,
+  "symbol": "ITG"
  },
  "JOF": {
   "country": "US",
@@ -1317,6 +1397,36 @@
   "name": "Korro Bio, Inc.",
   "price": 12.02,
   "symbol": "KRRO"
+ },
+ "KTTA": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Capital Market",
+  "fetched": "2026-11-19",
+  "ipo_date": "2021-09-15",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 18776877.0,
+  "name": "Pasithea Therapeutics Corp.",
+  "price": 0.5109,
+  "symbol": "KTTA"
+ },
+ "KURA": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-19",
+  "ipo_date": "2015-09-16",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 674389585.0,
+  "name": "Kura Oncology, Inc.",
+  "price": 7.34,
+  "symbol": "KURA"
  },
  "KYN": {
   "country": "US",
@@ -1415,6 +1525,21 @@
   "not_found": true,
   "symbol": "LNBIX"
  },
+ "LPG": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-19",
+  "ipo_date": "2014-05-08",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1937214160.0,
+  "name": "Dorian LPG Ltd.",
+  "price": 45.09,
+  "symbol": "LPG"
+ },
  "LRN": {
   "country": "US",
   "currency": "USD",
@@ -1502,6 +1627,21 @@
   "name": "MINISO Group Holding Limited",
   "price": 9.98,
   "symbol": "MNSO"
+ },
+ "MP": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-19",
+  "ipo_date": "2020-06-22",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 6408733234.0,
+  "name": "MP Materials Corp.",
+  "price": 35.95,
+  "symbol": "MP"
  },
  "MTDR": {
   "country": "US",
@@ -1777,6 +1917,21 @@
   "price": 76.62,
   "symbol": "PAM"
  },
+ "PCT": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Capital Market",
+  "fetched": "2026-11-19",
+  "ipo_date": "2020-07-14",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 365823640.0,
+  "name": "PureCycle Technologies, Inc.",
+  "price": 1.82,
+  "symbol": "PCT"
+ },
  "PDI": {
   "country": "US",
   "currency": "USD",
@@ -1819,6 +1974,21 @@
   "price": 135.46,
   "symbol": "PEP"
  },
+ "PEPG": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-19",
+  "ipo_date": "2022-05-06",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 265270718.0,
+  "name": "PepGen Inc.",
+  "price": 3.83,
+  "symbol": "PEPG"
+ },
  "PHK": {
   "country": "US",
   "currency": "USD",
@@ -1832,6 +2002,21 @@
   "name": "PIMCO High Income Fund",
   "price": 4.04,
   "symbol": "PHK"
+ },
+ "PLBY": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Market",
+  "fetched": "2026-11-19",
+  "ipo_date": "2020-08-31",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 151298940.0,
+  "name": "Playboy, Inc.",
+  "price": 1.29,
+  "symbol": "PLBY"
  },
  "PMPEX": {
   "country": "US",
@@ -1851,6 +2036,21 @@
   "fetched": "2026-10-27",
   "not_found": true,
   "symbol": "PORT.U"
+ },
+ "PRAA": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-19",
+  "ipo_date": "2002-11-08",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 442156576.0,
+  "name": "PRA Group, Inc.",
+  "price": 11.74,
+  "symbol": "PRAA"
  },
  "PRHI": {
   "country": "US",
@@ -2142,6 +2342,21 @@
   "price": 153.86,
   "symbol": "SPXC"
  },
+ "SSII": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Capital Market",
+  "fetched": "2026-11-19",
+  "ipo_date": "2018-10-17",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 262757171.0,
+  "name": "SS Innovations International, Inc.",
+  "price": 1.31,
+  "symbol": "SSII"
+ },
  "STC": {
   "country": "US",
   "currency": "USD",
@@ -2170,6 +2385,21 @@
   "name": "Starling Oncology, Inc.",
   "price": 4.2,
   "symbol": "STLN"
+ },
+ "STUB": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "exchange_full": "New York Stock Exchange",
+  "fetched": "2026-11-19",
+  "ipo_date": "2025-09-17",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1725952055.0,
+  "name": "StubHub Holdings, Inc.",
+  "price": 4.83,
+  "symbol": "STUB"
  },
  "STVN": {
   "country": "IT",
@@ -2220,6 +2450,21 @@
   "price": 1.5,
   "symbol": "TDIC"
  },
+ "TEAM": {
+  "country": "AU",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Select",
+  "fetched": "2026-11-19",
+  "ipo_date": "2015-12-09",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 34012745084.0,
+  "name": "Atlassian Corporation",
+  "price": 135.05,
+  "symbol": "TEAM"
+ },
  "TENX": {
   "country": "US",
   "currency": "USD",
@@ -2233,6 +2478,21 @@
   "name": "Tenax Therapeutics, Inc.",
   "price": 1.64,
   "symbol": "TENX"
+ },
+ "TH": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Capital Market",
+  "fetched": "2026-11-19",
+  "ipo_date": "2018-03-12",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1194762275.0,
+  "name": "Target Hospitality Corp.",
+  "price": 12.2,
+  "symbol": "TH"
  },
  "THRM": {
   "country": "US",
@@ -2395,6 +2655,21 @@
   "price": 24.68,
   "symbol": "UPBD"
  },
+ "UPST": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ",
+  "fetched": "2026-11-19",
+  "ipo_date": "2020-12-16",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 1783323032.0,
+  "name": "Upstart Holdings, Inc.",
+  "price": 18.03,
+  "symbol": "UPST"
+ },
  "UUU": {
   "country": "US",
   "currency": "USD",
@@ -2427,6 +2702,21 @@
   "fetched": "2026-10-27",
   "not_found": true,
   "symbol": "VDTA"
+ },
+ "VISN": {
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "exchange_full": "NASDAQ Global Market",
+  "fetched": "2026-11-19",
+  "ipo_date": "2013-10-25",
+  "is_adr": false,
+  "is_etf": false,
+  "is_fund": false,
+  "market_cap": 838768313.0,
+  "name": "Vistance Networks, Inc.",
+  "price": 4.12,
+  "symbol": "VISN"
  },
  "WCC": {
   "country": "US",
